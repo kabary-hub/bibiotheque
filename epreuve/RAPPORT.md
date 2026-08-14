@@ -75,12 +75,21 @@ OS name: "windows 11", version: "10.0", arch: "amd64", family: "windows"
 
 **Réponse :**
 
-<!-- À RÉDIGER — deux phrases, avec tes mots. Trois éléments doivent y figurer :
-     1. le constat : la version affichée par Maven, comparée à celle de `java -version` ;
-     2. d'où vient cette version : comment le script mvnw.cmd choisit le JDK qu'il utilise ;
-     3. la variable d'environnement qui tranche, et ce qui se passerait sur une
-        machine possédant plusieurs JDK.
-     Tu dois pouvoir défendre cette réponse à l'oral. -->
+Oui, c'est bien la même version : `mvnw.cmd` annonce `Java version: 21.0.10`,
+exactement ce que renvoie `java -version`, et il précise même le répertoire dont
+elle provient — `C:\Program Files\Java\jdk-21.0.10`. Cette version n'est pas
+choisie au hasard par Maven : le script `mvnw.cmd` cherche d'abord un JDK à
+l'emplacement indiqué par la variable d'environnement **`JAVA_HOME`**, et ne se
+rabat sur le `java` trouvé dans le `PATH` que si cette variable n'est pas
+définie.
+
+Si les deux coïncident sur ma machine, c'est simplement parce que je n'ai qu'un
+seul JDK installé et que `JAVA_HOME` pointe dessus. Sur un poste où plusieurs
+JDK cohabitent, les deux commandes peuvent parfaitement afficher des versions
+différentes : `java -version` révèle le JDK d'exécution servi par le `PATH`,
+tandis que `mvnw -version` révèle celui que Maven utilisera réellement pour
+compiler. C'est ce dernier qui compte pour un build, et c'est `JAVA_HOME` qui
+le détermine.
 
 ---
 
