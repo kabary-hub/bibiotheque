@@ -139,6 +139,49 @@ services:
     networks:
       - bibliotheque-net
 
+  # ---------------------------------------------------------------------------
+  #  Initialisation des donnees
+  # ---------------------------------------------------------------------------
+  #  Sans ce service, un « docker compose up » sur une machine vierge donne une
+  #  application dans laquelle on ne peut pas entrer : la base est vide, aucun
+  #  compte n'existe, et POST /admin/users exige deja un jeton. Il fallait
+  #  inserer le premier administrateur en SQL a la main.
+  #
+  #  Ce conteneur s'execute une fois, insere le compte administrateur, un
+  #  compte lecteur et six livres, puis s'arrete. Son etat final « Exited (0) »
+  #  est le comportement attendu, pas une panne.
+  # ---------------------------------------------------------------------------
+  seed:
+    # Reutilise l'image de MySQL, deja presente : elle embarque le client
+    # « mysql » dont le script a besoin. Aucune image supplementaire a
+    # telecharger.
+    image: mysql:8.0
+    container_name: bibliotheque-seed
+
+    # Le conteneur ne doit pas etre relance apres sa sortie : c'est une tache
+    # ponctuelle, pas un service.
+    restart: "no"
+
+    depends_on:
+      # « service_started » suffit : le script attend lui-meme que les tables
+      # existent. Les attendre ici serait impossible — Compose sait verifier
+      # qu'un service repond, pas qu'Hibernate a fini de creer son schema.
+      backend:
+        condition: service_started
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bibliotheque}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+
+    volumes:
+      - ./docker/seed.sql:/seed/seed.sql:ro
+      - ./docker/seed-entrypoint.sh:/seed/entrypoint.sh:ro
+
+    entrypoint: ["/bin/bash", "/seed/entrypoint.sh"]
+
+    networks:
+      - bibliotheque-net
+
 
 networks:
   bibliotheque-net:
