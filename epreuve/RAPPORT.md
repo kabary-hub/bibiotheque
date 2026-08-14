@@ -715,6 +715,10 @@ Deux fragilités du même ordre, visibles dans les mêmes lignes :
 
 ### 4.2 — Trois manipulations
 
+> Les codes ci-dessous ne sont pas déduits du code : ils ont été **obtenus
+> contre l'application en fonctionnement**, une fois la pile démarrée par
+> `docker compose up -d`.
+
 | Manipulation | Code / comportement | Fichier responsable |
 |---|---|---|
 | `curl -X POST http://localhost:8080/admin/books` sans en-tête `Authorization` | **401 Unauthorized** | `bibliotheque-backend/.../configuration/JwtAuthenticationEntryPoint.java` (ligne 17) |
@@ -793,6 +797,18 @@ exécuter le garde. Le serveur, lui, ne peut pas être contourné.
 > démonstration du raisonnement ci-dessus : ici, la protection côté navigateur
 > existe, la protection côté serveur manque, et c'est celle qui manque qui
 > compte.
+>
+> **Vérifié contre l'application en fonctionnement.** En s'authentifiant comme
+> `lecteur` (rôle `User`, le compte créé par le service `seed`) et en appelant
+> l'API avec le jeton obtenu :
+>
+> ```
+> GET /admin/books  avec un jeton de role User
+>   -> HTTP 200, 6 livres retournes
+> ```
+>
+> Le même compte, dans le navigateur, est renvoyé vers `/forbidden` sans même
+> émettre de requête. L'interface interdit ce que le serveur autorise.
 
 
 
