@@ -1,0 +1,16 @@
+# Ces dossiers sont regeneres dans l'image. Les envoyer au demon Docker
+# ajouterait des centaines de Mo au contexte de build, pour rien.
+node_modules/
+dist/
+.angular/
+
+# Reglages locaux et fichiers de test, sans effet sur le bundle servi.
+.vscode/
+.idea/
+*.iml
+
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+README.md
