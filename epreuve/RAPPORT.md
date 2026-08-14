@@ -268,9 +268,27 @@ public class Books {
 }
 ```
 
-**Nom de table visé :** `Books`, avec une majuscule. C'est écrit explicitement
-dans `@Table(name = "Books")` à la ligne 9 de `Books.java`. Sans cette
-annotation, Hibernate aurait déduit le nom depuis celui de la classe.
+**Nom de table demandé :** `Books`, avec une majuscule. C'est écrit
+explicitement dans `@Table(name = "Books")`, à la **ligne 9 de `Books.java`**.
+Sans cette annotation, le nom aurait été déduit de celui de la classe.
+
+**Mais ce n'est pas le nom réellement créé en base**, et c'est un piège
+classique. Spring Boot installe par défaut une stratégie de nommage physique,
+`CamelCaseToUnderscoresNamingStrategy`, qui s'applique **y compris aux noms
+écrits à la main dans `@Table`** : elle les met en minuscules et convertit le
+camelCase en `snake_case`. La table effectivement créée s'appelle donc `books`,
+et les colonnes `book_id`, `book_name`, `book_author`, `no_of_copies`.
+
+Deux éléments corroborent cette lecture : les instructions SQL du README pour
+créer le premier compte manipulent bien `users`, `role` et `user_role` en
+minuscules ; et le README précise lui-même que les noms sont convertis en
+`snake_case`, en invitant à les vérifier plutôt qu'à les supposer.
+
+Sur MySQL sous Linux — donc dans le conteneur — les noms de tables sont
+sensibles à la casse. Écrire `SELECT * FROM Books;` échouerait ; il faut
+`SELECT * FROM books;`. Sous Windows, la même requête passerait, la casse y
+étant ignorée par défaut : une différence de comportement entre le poste de
+développement et le conteneur.
 
 Nuance importante : la classe `Books` ne fait que **déclarer** la
 correspondance. La transformation réelle en `INSERT` / `SELECT` est effectuée à
@@ -539,7 +557,43 @@ déploiement sur un autre domaine fonctionne sans recompiler.
 local demandé, et cette modification touche au code source du frontend —
 au-delà du périmètre de l'exercice, qui porte sur la mise en conteneur.
 
-### 3.7 — Autres décisions
+### 3.7 — Le service `seed` (bonus)
+
+**Problème.** Sur une machine vierge, `docker compose up` donnait une
+application dans laquelle il était impossible d'entrer : la base est vide,
+aucun compte n'existe, et `POST /admin/users` exige déjà un jeton. Il fallait
+insérer le premier administrateur en SQL à la main (README, section 5).
+
+**Pourquoi `/docker-entrypoint-initdb.d` ne convient pas.** C'est le mécanisme
+habituel de l'image MySQL, mais il s'exécute **avant** que les tables
+n'existent : ce sont Hibernate et `ddl-auto=update` qui les créent, au démarrage
+du backend, donc bien après l'initialisation de MySQL. Un script placé là
+échouerait sur des tables inconnues.
+
+**Solution.** Un quatrième service, `seed`, qui réutilise l'image `mysql:8.0`
+déjà téléchargée — pour son client `mysql`, aucune image supplémentaire n'est
+nécessaire. Il démarre après le backend, interroge la base jusqu'à ce que la
+table `books` soit interrogeable, puis joue `docker/seed.sql`, et s'arrête.
+
+Son état final `Exited (0)` dans `docker compose ps -a` est **le comportement
+attendu**, pas une panne : c'est une tâche ponctuelle, d'où `restart: "no"`.
+
+Le script insère deux comptes (`admin` / `lecteur`, mot de passe `admin123`,
+haché en BCrypt) et six livres, dont un à exemplaire unique pour pouvoir tester
+le message de rupture de stock. Toutes les insertions sont en `INSERT IGNORE` :
+le service peut être rejoué sans créer de doublon.
+
+Il avance enfin le compteur de `hibernate_sequence` au-delà des identifiants
+posés à la main. Sans cela, la première création de livre depuis l'interface
+entrerait en collision avec une clé déjà prise.
+
+**Un fichier `.gitattributes` accompagne ce service** avec la règle
+`*.sh text eol=lf`. Sans elle, git extrait le script avec des fins de ligne
+CRLF sur un poste Windows ; le noyau Linux lit alors `#!/bin/bash\r`, ne trouve
+aucun interpréteur de ce nom, et le conteneur échoue sur un `exec format error`
+dont la cause est très difficile à voir.
+
+### 3.8 — Autres décisions
 
 * **Images en deux étapes.** L'image finale du backend ne contient ni Maven, ni
   les sources, ni le cache de dépendances : seulement un JRE et le jar. Même
@@ -595,21 +649,27 @@ du backend affiche quatre instructions, dans cet ordre :
 
 ```sql
 -- 10. lecture de l'emprunteur
-select users0_.user_id as user_id1_2_0_, ... from Users users0_ where users0_.user_id=?
+select users0_.user_id as user_id1_2_0_, ... from users users0_ where users0_.user_id=?
 
 -- 11. lecture du livre
-select books0_.book_id as book_id1_0_0_, ... from Books books0_ where books0_.book_id=?
+select books0_.book_id as book_id1_0_0_, ... from books books0_ where books0_.book_id=?
 
 -- 14. decrement du stock
-update Books set book_author=?, book_genre=?, book_name=?, no_of_copies=? where book_id=?
+update books set book_author=?, book_genre=?, book_name=?, no_of_copies=? where book_id=?
 
 -- 17. creation de la ligne d'emprunt
-insert into Borrow (book_id, due_date, issue_date, return_date, user_id) values (?, ?, ?, ?, ?)
+insert into borrow (book_id, due_date, issue_date, return_date, user_id) values (?, ?, ?, ?, ?)
 ```
 
-Les noms de colonnes sont en `snake_case` alors que les champs Java sont en
-`camelCase` : c'est la stratégie de nommage physique par défaut de Spring Boot
-qui opère la conversion (`bookId` → `book_id`).
+Deux observations sur ces noms :
+
+* Les colonnes sont en `snake_case` alors que les champs Java sont en
+  `camelCase` (`bookId` → `book_id`).
+* Les tables sont en **minuscules**, alors que les annotations écrivent
+  `@Table(name = "Books")` et `@Table(name = "Borrow")` avec une majuscule.
+
+Les deux conversions sont l'œuvre de la même stratégie de nommage physique de
+Spring Boot, `CamelCaseToUnderscoresNamingStrategy`, détaillée en 2.3.
 
 #### Ce que `borrowBook()` fait de particulier
 
