@@ -36,7 +36,12 @@ RUN npm config set fetch-timeout 900000 \
 
 # npm ci installe exactement ce que decrit package-lock.json. On retombe sur
 # npm install si le lock est desynchronise du package.json.
-RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+#
+# --mount=type=cache conserve le cache de paquets npm entre deux constructions :
+# une tentative interrompue ne repart pas de zero. Le cache reste portable, il
+# est simplement vide sur une machine qui n'a jamais vu le projet.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
 COPY . .
 
