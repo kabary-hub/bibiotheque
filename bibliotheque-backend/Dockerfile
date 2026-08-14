@@ -24,28 +24,33 @@ FROM maven:3.8-eclipse-temurin-11 AS build
 
 WORKDIR /build
 
-# Le pom seul d'abord : tant qu'il ne change pas, Docker reutilise le cache de
-# cette couche et ne retelecharge pas les dependances a chaque build.
+# Miroir vers Maven Central. Le pom.xml declare deux depots supplementaires
+# (spring-milestones et spring-snapshots) interroges avant central pour chaque
+# artefact : deux allers-retours perdus par dependance. Voir maven-settings.xml.
+COPY maven-settings.xml ./
+
 COPY pom.xml ./
-
-# --mount=type=cache conserve le depot Maven local entre deux constructions,
-# hors des couches de l'image. Si une construction est interrompue — coupure
-# reseau, echec d'un autre service annulant celui-ci — la suivante reprend avec
-# ce qui a deja ete telecharge au lieu de tout recommencer.
-#
-# Le cache reste portable : sur une machine qui n'a jamais vu le projet, il est
-# simplement vide et tout est telecharge normalement. « --no-cache » invalide
-# les couches, pas les caches de ce type.
-#
-# Les options wagon rendent chaque telechargement resistant aux coupures
-# (Connection reset observe sur des connexions lentes).
-RUN --mount=type=cache,target=/root/.m2/repository \
-    mvn -B dependency:go-offline \
-      -Dmaven.wagon.http.retryHandler.count=5 \
-      -Dmaven.wagon.http.pool=false
-
 COPY src ./src
 
+# Une seule invocation de Maven, volontairement.
+#
+# La version precedente appelait « dependency:go-offline » pour mettre les
+# dependances en cache dans une couche distincte. C'est un mauvais calcul ici :
+# go-offline resout tout ce que N'IMPORTE QUELLE phase du cycle de vie pourrait
+# exiger — y compris maven-site-plugin et ses dependances d'archeologie (oro,
+# sslext...) dont la construction n'a aucun besoin. Sur une connexion lente,
+# cela ajoute des dizaines de minutes de telechargement pour rien.
+#
+# « package » ne resout que ce qu'il utilise reellement. La mise en cache des
+# dependances est de toute facon assuree par le montage ci-dessous, pas par le
+# decoupage en couches.
+#
+# --mount=type=cache conserve le depot Maven local entre deux constructions,
+# hors des couches de l'image : une construction interrompue — coupure reseau,
+# annulation — reprend avec ce qui a deja ete telecharge. Le cache reste
+# portable : vide sur une machine neuve, et « --no-cache » invalide les couches,
+# pas les caches de ce type.
+#
 # Les tests sont ignores : BibliothequeApplicationTests charge le contexte
 # Spring complet, donc exige une base MySQL joignable. Elle ne l'est pas
 # pendant un build d'image, qui ne participe pas au reseau de compose.
@@ -53,7 +58,7 @@ COPY src ./src
 # Le jar produit va dans /build/target/, hors du point de montage de cache : il
 # est donc bien ecrit dans la couche et recuperable par l'etape suivante.
 RUN --mount=type=cache,target=/root/.m2/repository \
-    mvn -B clean package -DskipTests \
+    mvn -B -s maven-settings.xml clean package -DskipTests \
       -Dmaven.wagon.http.retryHandler.count=5 \
       -Dmaven.wagon.http.pool=false
 
