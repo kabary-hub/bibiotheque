@@ -23,6 +23,17 @@ WORKDIR /build
 # rejouee que si les dependances changent, pas a chaque modification de source.
 COPY package.json package-lock.json ./
 
+# Reglages reseau avant l'installation.
+#
+# Les valeurs par defaut de npm (60s de delai, 2 tentatives) sont trop courtes
+# sur une connexion lente : l'installation echoue avec ERR_SOCKET_TIMEOUT au
+# bout de plusieurs minutes, alors que le telechargement progressait. On allonge
+# le delai et on augmente le nombre de reprises.
+RUN npm config set fetch-timeout 900000 \
+ && npm config set fetch-retries 8 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 180000
+
 # npm ci installe exactement ce que decrit package-lock.json. On retombe sur
 # npm install si le lock est desynchronise du package.json.
 RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
