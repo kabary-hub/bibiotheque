@@ -1,3 +1,7 @@
 # Réglages locaux des outils
 .claude/
 .idea/
+
+# Secrets et configuration locale de Docker Compose.
+# Le modele versionne est .env.example, sans valeur reelle.
+.env

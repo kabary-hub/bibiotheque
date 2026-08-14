@@ -1,0 +1,18 @@
+# Artefacts de build : ils seraient recompiles dans l'image de toute facon, et
+# les envoyer au demon Docker ralentit chaque build pour rien.
+target/
+
+# Reglages locaux, sans effet dans un conteneur.
+.idea/
+.vscode/
+*.iml
+
+# Le wrapper Maven n'est pas utilise : l'image de build embarque deja Maven.
+mvnw
+mvnw.cmd
+.mvn/
+
+.git/
+.gitignore
+Dockerfile
+.dockerignore
