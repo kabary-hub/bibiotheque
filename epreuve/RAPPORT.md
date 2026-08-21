@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Auteur** | Tasse Ulruch <!-- vérifie l'orthographe exacte de ton nom --> |
+| **Auteur** | Tasse Ulruch |
 | **Branche** | `epreuve/tasse-ulruch` |
 | **Machine** | Windows 11 Pro, terminal PowerShell |
 | **Date** | 14 août 2026 |
