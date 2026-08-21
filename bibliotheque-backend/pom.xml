@@ -15,6 +15,17 @@
 	<description>Library Management System</description>
 	<properties>
 		<java.version>1.8</java.version>
+		<!--
+		  spring-boot-starter-parent 2.4.5 fixe Lombok en 1.18.20, qui manipule les
+		  classes internes de javac (com.sun.tools.javac.tree.JCTree). Le champ
+		  'qualid' de JCImport ayant disparu au JDK 21, la compilation echoue avec
+		  un NoSuchFieldError sur tout poste equipe d'un JDK recent.
+		  1.18.30 sait parler au javac du JDK 21. Lombok n'agissant qu'a la
+		  compilation, ce relevement n'a aucun effet a l'execution, et la cible
+		  reste le bytecode Java 8 declaree ci-dessus.
+		-->
+		<lombok.version>1.18.30</lombok.version>
+		<springdoc.version>1.5.13</springdoc.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -28,6 +39,31 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!--
+		  Depuis Spring Boot 2.3, spring-boot-starter-web n'embarque plus Bean
+		  Validation. Sans ce starter, les annotations @NotNull de
+		  ReservationRequestDto seraient ignorees en silence et une requete sans
+		  livreId passerait jusqu'au service au lieu de renvoyer 400.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!--
+		  Documentation OpenAPI 3 exigee par l'enonce de la seance 2.
+		  springdoc-openapi et non springfox : springfox 3.0.0 est abandonne et
+		  incompatible avec les versions recentes de Spring Boot. La branche 1.5.x
+		  est celle qui cible javax, comme le reste du projet.
+		    Swagger UI    : http://localhost:8080/swagger-ui.html
+		    Contrat brut  : http://localhost:8080/v3/api-docs
+		-->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 		<dependency>
@@ -59,6 +95,16 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!--
+		  Base en memoire, portee test uniquement : elle n'entre pas dans le jar
+		  livre. Elle permet de verifier le module de bout en bout sans MySQL,
+		  donc sur n'importe quelle machine et sans Docker.
+		-->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
