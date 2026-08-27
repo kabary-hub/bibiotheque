@@ -79,9 +79,10 @@ Puis <http://localhost:4200>, connexion `admin` / `admin123`.
 Les codes HTTP de la section 4.2 ont été **confirmés par des appels réels**, pas
 déduits de la lecture du code.
 
----
+## Captures
 
-## Reste à faire avant d'ouvrir la PR
+`epreuve/captures/docker-compose-ps.png` montre les trois services démarrés et la base
+marquée `healthy`, ce qui atteste que le `depends_on: condition: service_healthy` attend
+la **disponibilité** de MySQL et pas seulement le démarrage du conteneur.
 
-- [ ] Ajouter les captures dans `epreuve/captures/` — le dossier est encore vide :
-      `docker-compose-ps.png` et `application.png`.
+`epreuve/captures/README.md` dit ce que prouve chaque image et comment la reproduire.
