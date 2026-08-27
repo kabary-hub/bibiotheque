@@ -32,6 +32,11 @@ et le statut initial sont déterminés par le serveur.
 
 ![Swagger — les six endpoints du module](captures/swagger-reservations.png)
 
+> **Au moment de coller ce fichier dans la PR :** ce lien relatif s'affiche bien dans le dépôt,
+> mais **pas** dans une description de Pull Request — GitHub n'y résout pas les chemins relatifs.
+> Il faut glisser-déposer `epreuve/seance-2/captures/swagger-reservations.png` dans l'éditeur de
+> la PR, ce qui l'héberge et remplace la ligne ci-dessus par une URL absolue.
+
 ## Où chaque règle est implémentée
 
 Les emplacements renvoient à `bibliotheque-backend/src/main/java/com/ibizabroker/bibliotheque/`.
