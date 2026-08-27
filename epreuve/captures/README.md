@@ -1,20 +1,19 @@
-# Captures de l'epreuve
+# Captures de l'epreuve — seance 1
 
 | Fichier | Ce qu'il montre |
 |---|---|
-| `swagger-reservations.png` | La documentation Swagger generee sur `http://localhost:8080/swagger-ui.html`. Les six endpoints du module Reservation y figurent avec leur verbe HTTP et leur resume, sous le tag `Reservations`. C'est la capture demandee dans la description de la PR de la seance 2. |
-| `docker-compose-ps.png` | La sortie de `docker compose ps` : les trois services (`bibliotheque-db`, `bibliotheque-backend`, `bibliotheque-frontend`) demarres, la base marquee `healthy` par son healthcheck. C'est la preuve que le `depends_on: condition: service_healthy` de la seance 1 fait son office. |
+| `docker-compose-ps.png` | La sortie de `docker compose ps` : les trois services (`bibliotheque-db`, `bibliotheque-backend`, `bibliotheque-frontend`) demarres, la base marquee `healthy` par son healthcheck. C'est la preuve que le `depends_on: condition: service_healthy` fait son office — le backend attend la **disponibilite** de MySQL, pas seulement le demarrage du conteneur. |
 
-## Reproduire la capture Swagger
+## Reproduire
 
 ```bash
-docker compose up -d db
-cd bibliotheque-backend
-./mvnw spring-boot:run
+docker compose up -d
+docker compose ps
 ```
 
-Puis ouvrir <http://localhost:8080/swagger-ui.html> et deplier le tag `Reservations`.
+La base met plusieurs dizaines de secondes a initialiser ses fichiers au tout premier
+lancement. Tant qu'elle n'est pas `healthy`, le backend n'est pas demarre : c'est le
+comportement attendu, pas un blocage.
 
-Les chemins Swagger sont ouverts sans authentification : ils ont ete ajoutes a la
-liste `permitAll()` de `WebSecurityConfiguration`. Sans cela, `springdoc` repond 401
-et la page reste blanche.
+> La capture Swagger du module Reservation appartient a la **seance 2**. Elle vit sur la
+> branche `feature/reservation-tasse-ulruch`, sous `epreuve/seance-2/captures/`.
