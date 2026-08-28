@@ -1,27 +1,39 @@
-<div class="container col-md-6 offset-mid-3">
-    <h3 class="text-center"> Add Book </h3>
-    <form (ngSubmit) = "onSubmit()" autocomplete="off">
-
-        <div class="form-group">
-            <label style="margin-bottom: 10px"> Book Name </label>
-            <input type="text" class="form-control" style="margin-bottom: 10px" id="bookName" [(ngModel)] = "book.bookName" name="bookName">
+<div class="form-page">
+  <div class="card form-card">
+    <div class="card-header">
+      <h2 class="card-title">Add Book</h2>
+    </div>
+    <div class="card-body">
+      <div *ngIf="erreur" class="alert alert--danger" role="alert">
+        <div class="alert-body">{{ erreur }}</div>
+      </div>
+      <form (ngSubmit)="onSubmit()" autocomplete="off" #f="ngForm">
+        <div class="form-grid">
+          <div class="field">
+            <label class="label" for="bookName">Book title <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" type="text" id="bookName" name="bookName" [(ngModel)]="book.bookName" required placeholder="e.g. The Great Gatsby">
+          </div>
+          <div class="field">
+            <label class="label" for="bookAuthor">Author <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" type="text" id="bookAuthor" name="bookAuthor" [(ngModel)]="book.bookAuthor" required placeholder="e.g. F. Scott Fitzgerald">
+          </div>
+          <div class="field">
+            <label class="label" for="bookGenre">Genre</label>
+            <input class="input" type="text" id="bookGenre" name="bookGenre" [(ngModel)]="book.bookGenre" placeholder="e.g. Novel">
+          </div>
+          <div class="field">
+            <label class="label" for="noOfCopies">Number of copies <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" type="number" id="noOfCopies" name="noOfCopies" [(ngModel)]="book.noOfCopies" required min="0" placeholder="0">
+          </div>
         </div>
-
-        <div class="form-group">
-            <label style="margin-bottom: 10px"> Author </label>
-            <input type="text" class="form-control" style="margin-bottom: 10px" id="bookAuthor" [(ngModel)] = "book.bookAuthor" name="bookAuthor">
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="f.invalid || envoiEnCours">
+            <span *ngIf="envoiEnCours" class="spinner spinner--sm" aria-hidden="true"></span>
+            {{ envoiEnCours ? 'Saving...' : 'Save book' }}
+          </button>
+          <a routerLink="/books" class="btn btn-secondary">Cancel</a>
         </div>
-
-        <div class="form-group">
-            <label style="margin-bottom: 10px"> Genre </label>
-            <input type="text" class="form-control" style="margin-bottom: 10px" id="bookGenre" [(ngModel)] = "book.bookGenre" name="bookGenre">
-        </div>
-
-        <div class="form-group">
-            <label style="margin-bottom: 10px"> Number of Copies </label>
-            <input type="text" class="form-control" style="margin-bottom: 10px" id="noOfCopies" [(ngModel)] = "book.noOfCopies" name="noOfCopies">
-        </div>
-
-        <button class="btn btn-success" type="submit"> Submit </button>
-    </form>
+      </form>
+    </div>
+  </div>
 </div>

@@ -14,6 +14,7 @@ import { UpdateUserComponent } from './update-user/update-user.component';
 import { UserDetailsComponent } from './user-details/user-details.component';
 import { UsersListComponent } from './users-list/users-list.component';
 import { ReservationsComponent } from './reservations/reservations.component';
+import { MyBooksComponent } from './my-books/my-books.component';
 import { AuthGuard } from './_auth/auth.guard';
 
 const routes: Routes = [
@@ -30,6 +31,7 @@ const routes: Routes = [
   {path: 'forbidden', component: ForbiddenComponent},
   {path: 'borrow-book', component: BorrowBookComponent, canActivate:[AuthGuard], data:{roles:['User']}},
   {path: 'return-book', component: ReturnBookComponent, canActivate:[AuthGuard], data:{roles:['User']}},
+  {path: 'my-books',   component: MyBooksComponent,    canActivate:[AuthGuard], data:{roles:['User']}},
   // Ecran d'administration : il liste les reservations de tous les adherents et
   // choisit l'adherent dans une liste deroulante alimentee par GET /admin/users,
   // que seul un Admin a le droit d'appeler.

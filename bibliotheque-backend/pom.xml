@@ -72,9 +72,14 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		<!--
+			PostgreSQL remplace MySQL. La version est celle que gere le parent
+			Spring Boot 2.4.5 : la fixer a la main exposerait a un pilote plus
+			recent que ce que Hibernate 5.4 sait accompagner.
+		-->
 		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>

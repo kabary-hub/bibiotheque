@@ -26,6 +26,20 @@ public class BusinessRuleException extends RuntimeException {
         this.regle = regle;
     }
 
+    /**
+     * Conflit sans reference de regle numerotee.
+     *
+     * Les regles RG-01 a RG-06 appartiennent au module Reservation. Les autres
+     * modules ont aussi des conflits legitimes — un nom d'utilisateur deja pris,
+     * un livre epuise — qui meritent un 409 mais qu'il serait faux d'etiqueter
+     * d'un « RG-xx » qui n'existe pas dans l'enonce. Le champ « regle » reste
+     * alors absent du JSON, ce que @JsonInclude(NON_NULL) assure deja.
+     */
+    public BusinessRuleException(String message) {
+        super(message);
+        this.regle = null;
+    }
+
     public String getRegle() {
         return regle;
     }

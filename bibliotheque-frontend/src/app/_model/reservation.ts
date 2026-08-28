@@ -39,11 +39,11 @@ export type StatutReservation =
  * reservations, eux, viennent tous de l'API sans exception.
  */
 export const STATUTS: { code: StatutReservation, libelle: string, classe: string }[] = [
-    { code: 'EN_ATTENTE', libelle: 'En attente', classe: 'bg-secondary' },
-    { code: 'DISPONIBLE', libelle: 'Disponible', classe: 'bg-success' },
-    { code: 'ANNULEE', libelle: 'Annulee', classe: 'bg-dark' },
-    { code: 'EXPIREE', libelle: 'Expiree', classe: 'bg-warning text-dark' },
-    { code: 'HONOREE', libelle: 'Honoree', classe: 'bg-primary' }
+    { code: 'EN_ATTENTE', libelle: 'En attente', classe: 'badge--neutral' },
+    { code: 'DISPONIBLE', libelle: 'Disponible', classe: 'badge--success' },
+    { code: 'ANNULEE',    libelle: 'Annulee',    classe: 'badge--danger'  },
+    { code: 'EXPIREE',   libelle: 'Expiree',    classe: 'badge--warning' },
+    { code: 'HONOREE',   libelle: 'Honoree',    classe: 'badge--primary' }
 ];
 
 /** RG-05 : seuls ces deux statuts autorisent une annulation. */

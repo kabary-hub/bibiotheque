@@ -12,33 +12,28 @@ export class UsersListComponent implements OnInit {
 
   users: Users[];
 
-  constructor(private usersService: UsersService,
-    private router: Router) { }
+  constructor(private usersService: UsersService, private router: Router) {}
 
-  ngOnInit(): void {
-    this.getUsers();
-    // this.users = [{
-    //   "userId": 1,
-    //   "name": "tarun",
-    //   "username": "tarungowda",
-    //   "role": "STUDENT",
-    //   "password": "sdklfjlakdsf"
-    // }]
-  }
+  ngOnInit(): void { this.getUsers(); }
 
   private getUsers() {
-    this.usersService.getUsersList().subscribe(data =>{
-      this.users = data;
-      console.log(this.users);
-    });
+    this.usersService.getUsersList().subscribe(data => { this.users = data; });
   }
 
-  userDetails(userId: number) {
-    this.router.navigate(['user-details', userId ]);
+  getRoleLabel(user: Users): string {
+    const roles: string[] = (user as any).roles || [];
+    return roles[0] || (user.role?.[0]?.roleName) || '—';
   }
 
-  updateUser(userId: number) {
-    this.router.navigate(['update-user', userId ]);
+  getRoleBadge(user: Users): string {
+    return this.getRoleLabel(user) === 'Admin' ? 'badge--primary' : 'badge--neutral';
   }
+
+  isUser(user: Users): boolean {
+    return this.getRoleLabel(user) === 'User';
+  }
+
+  userDetails(userId: number) { this.router.navigate(['user-details', userId]); }
+  updateUser(userId: number)  { this.router.navigate(['update-user', userId]); }
 
 }

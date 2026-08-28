@@ -11,32 +11,24 @@ import { BooksService } from '../_service/books.service';
 export class BooksListComponent implements OnInit {
 
   books: Books[];
+  bookToDelete: Books | null = null;
 
-  constructor(private booksService: BooksService,
-    private router: Router) { }
+  constructor(private booksService: BooksService, private router: Router) {}
 
-  ngOnInit(): void {
-    this.getBooks();
-  }
+  ngOnInit(): void { this.getBooks(); }
 
   private getBooks() {
-    this.booksService.getBooksList().subscribe(data =>{
-      this.books = data;
-    });
+    this.booksService.getBooksList().subscribe(data => { this.books = data; });
   }
 
-  updateBook(bookId: number) {
-    this.router.navigate(['update-book', bookId ]);
-  }
+  confirmDelete(book: Books) { this.bookToDelete = book; }
 
   deleteBook(bookId: number) {
-    this.booksService.deleteBook(bookId).subscribe( data=> {
-      this.getBooks();
-    });
+    this.bookToDelete = null;
+    this.booksService.deleteBook(bookId).subscribe(() => this.getBooks());
   }
 
-  bookDetails(bookId: number) {
-    this.router.navigate(['book-details', bookId ]);
-  }
+  updateBook(bookId: number) { this.router.navigate(['update-book', bookId]); }
+  bookDetails(bookId: number) { this.router.navigate(['book-details', bookId]); }
 
 }

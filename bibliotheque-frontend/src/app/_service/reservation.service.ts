@@ -40,6 +40,11 @@ export class ReservationService {
         return this.httpClient.get<Reservation[]>(this.baseURL, { params });
     }
 
+    listerParAdherent(adherentId: number): Observable<Reservation[]> {
+        const params = new HttpParams().set('adherentId', adherentId.toString());
+        return this.httpClient.get<Reservation[]>(this.baseURL, { params });
+    }
+
     creer(livreId: number, adherentId: number): Observable<Reservation> {
         return this.httpClient.post<Reservation>(this.baseURL, { livreId, adherentId });
     }

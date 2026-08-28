@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { Users } from '../_model/users';
+import { UserRequest, Users } from '../_model/users';
 import { UserAuthService } from './user-auth.service';
 
 @Injectable({
@@ -50,7 +50,7 @@ export class UsersService {
     return this.httpClient.get<Users[]>(`${this.baseURL}`);
   }
 
-  createUser(user: Users): Observable<Object> {
+  createUser(user: UserRequest): Observable<Object> {
     return this.httpClient.post(`${this.baseURL}`, user);
   }
 
@@ -58,7 +58,7 @@ export class UsersService {
     return this.httpClient.get<Users>(`${this.baseURL}/${userId}`);
   }
 
-  updateUser(userId: number, user: Users): Observable<Object> {
+  updateUser(userId: number, user: UserRequest): Observable<Object> {
     return this.httpClient.put(`${this.baseURL}/${userId}`, user);
   }
 

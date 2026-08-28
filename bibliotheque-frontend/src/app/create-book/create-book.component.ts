@@ -11,27 +11,20 @@ import { BooksService } from '../_service/books.service';
 export class CreateBookComponent implements OnInit {
 
   book: Books = new Books();
-  constructor(private booksService: BooksService,
-    private router: Router) { }
+  envoiEnCours = false;
+  erreur: string | null = null;
 
-  ngOnInit(): void {
-  }
+  constructor(private booksService: BooksService, private router: Router) {}
 
-  saveBook() {
-    this.booksService.createBook(this.book).subscribe(data => {
-      console.log(data);
-      this.goToBooksList();
-    },
-    error => console.log(error));
-  }
-
-  goToBooksList() {
-    this.router.navigate(['/books']);
-  }
+  ngOnInit(): void {}
 
   onSubmit() {
-    console.log(this.book);
-    this.saveBook();
+    this.erreur = null;
+    this.envoiEnCours = true;
+    this.booksService.createBook(this.book).subscribe({
+      next: () => { this.envoiEnCours = false; this.router.navigate(['/books']); },
+      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'An error occurred.'; }
+    });
   }
 
 }

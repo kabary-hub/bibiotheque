@@ -1,3 +1,11 @@
-<div class="container">
-    <p class="forbidden text-center">You do not have access to this page.</p>
+<div class="state" style="min-height: calc(100vh - var(--h-header) - var(--sp-8))">
+  <div class="state-icon state--error" aria-hidden="true">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+    </svg>
+  </div>
+  <p class="state-title">Access denied</p>
+  <p class="state-text">You do not have permission to view this page.</p>
+  <a routerLink="/" class="btn btn-primary btn-sm">Back to home</a>
 </div>

@@ -1,29 +1,55 @@
-<h2>User List</h2>
-<table class="table table-success table-striped">
-    <thead>
-        <tr>
-            <th> User ID </th>
-            <th> Name </th>
-            <th> Username </th>
-            <th> Role </th>
-            <th> View History </th>
-            <th> Edit User </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let user of users">
-            <td> {{ user.userId }} </td>
-            <td> {{ user.name }} </td>
-            <td> {{ user.username }} </td>
-            <td> {{ user.role[0].roleName }} </td>
-            <td>        
-                <div *ngIf="user.role[0].roleName === 'User'">
-                    <button (click) = "userDetails(user.userId)" class="btn btn-success"> View </button>
-                </div>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Users</h2>
+      <p class="card-subtitle">{{ users?.length || 0 }} registered account(s)</p>
+    </div>
+    <a routerLink="/register-user" class="btn btn-primary btn-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add user
+    </a>
+  </div>
+
+  <div *ngIf="!users" class="state">
+    <div class="spinner" aria-label="Loading..."></div>
+    <p class="state-text">Loading users...</p>
+  </div>
+
+  <div *ngIf="users && users.length === 0" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <p class="state-title">No users yet</p>
+    <a routerLink="/register-user" class="btn btn-primary btn-sm">Add user</a>
+  </div>
+
+  <div *ngIf="users && users.length > 0" class="card-body--flush">
+    <div class="table-wrap">
+      <table class="table" aria-label="User list">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th class="cell-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td data-label="Name" class="cell-strong">{{ user.name }}</td>
+            <td data-label="Username" class="cell-muted">{{ user.username }}</td>
+            <td data-label="Role">
+              <span class="badge" [ngClass]="getRoleBadge(user)">{{ getRoleLabel(user) }}</span>
             </td>
-            <td>
-                <button (click) = "updateUser(user.userId)" class="btn btn-info"> Edit </button> 
+            <td class="cell-actions">
+              <div class="btn-group">
+                <button *ngIf="isUser(user)" class="btn btn-secondary btn-sm" (click)="userDetails(user.userId)">History</button>
+                <button class="btn btn-secondary btn-sm" (click)="updateUser(user.userId)">Edit</button>
+              </div>
             </td>
-        </tr>
-    </tbody>
-</table>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

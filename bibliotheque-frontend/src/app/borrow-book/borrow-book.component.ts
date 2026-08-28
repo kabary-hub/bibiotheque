@@ -13,34 +13,36 @@ import { UserAuthService } from '../_service/user-auth.service';
 export class BorrowBookComponent implements OnInit {
 
   books: Books[];
-
-  constructor(
-    private booksService: BooksService,
-    private userAuthService: UserAuthService,
-    private borrowService: BorrowService,
-  ) { }
-
+  borrow: Borrow = new Borrow();
+  borrowingId: number | null = null;
+  succes: string | null = null;
+  erreur: string | null = null;
   userId = this.userAuthService.getUserId();
 
-  ngOnInit(): void {
-    this.getBooks();
-  }
+  constructor(private booksService: BooksService, private userAuthService: UserAuthService, private borrowService: BorrowService) {}
+
+  ngOnInit(): void { this.getBooks(); }
 
   private getBooks() {
-    this.booksService.getBooksList().subscribe(data =>{
-      this.books = data;
-    });
+    this.booksService.getBooksList().subscribe(data => { this.books = data; });
   }
 
-  borrow: Borrow = new Borrow();
-
   borrowBook(bookId: number) {
+    this.succes = null;
+    this.erreur = null;
+    this.borrowingId = bookId;
     this.borrow.bookId = bookId;
     this.borrow.userId = this.userId;
-    console.log(this.borrow);
-    this.borrowService.borrowBook(this.borrow).subscribe(data => {
-      console.log(data);
-    },
-    error => console.log(error));
+    this.borrowService.borrowBook(this.borrow).subscribe({
+      next: () => {
+        this.borrowingId = null;
+        this.succes = 'Book borrowed successfully!';
+        this.getBooks();
+      },
+      error: (err) => {
+        this.borrowingId = null;
+        this.erreur = err?.error?.message || 'Failed to borrow book.';
+      }
+    });
   }
 }

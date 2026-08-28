@@ -1,25 +1,64 @@
-<h2>List of books to be returned</h2>
-<table class="table table-success table-striped">
-    <thead>
-        <tr>
-            <th> Book ID </th>
-            <th> Issue Date </th>
-            <th> Return Date </th>
-            <th> Overdue Date </th>
-            <th> Action </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let b of borrow">
-            <td> {{ b.bookId }} </td>
-            <td> {{ b.issueDate }} </td>
-            <td> {{ b.returnDate }} </td>
-            <td> {{ b.dueDate }} </td>
-            <td>
-                <div *ngIf="b.returnDate === null">
-                    <button (click) = "returnBook(b.borrowId)" class="btn btn-success"> Return </button>
-                </div>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Return a Book</h2>
+      <p class="card-subtitle">Select a book to return to the library.</p>
+    </div>
+  </div>
+
+  <div *ngIf="!borrow" class="state">
+    <div class="spinner" aria-label="Loading..."></div>
+    <p class="state-text">Loading your borrowed books...</p>
+  </div>
+
+  <div *ngIf="borrow && borrow.length === 0" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </div>
+    <p class="state-title">No borrowed books</p>
+    <p class="state-text">You have no books to return at the moment.</p>
+  </div>
+
+  <div *ngIf="borrow && borrow.length > 0" class="card-body--flush">
+    <div class="table-wrap">
+      <table class="table" aria-label="Borrowed books">
+        <thead>
+          <tr>
+            <th>Book ID</th>
+            <th>Issue Date</th>
+            <th>Due Date</th>
+            <th>Return Date</th>
+            <th class="cell-actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of borrow">
+            <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
+            <td data-label="Issue Date">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Due Date">
+              <span class="badge" [ngClass]="isOverdue(b) ? 'badge--danger' : 'badge--neutral badge--plain'">
+                {{ b.dueDate | date:'dd/MM/yyyy' }}
+              </span>
             </td>
-        </tr>
-    </tbody>
-</table>
+            <td data-label="Return Date">
+              <span *ngIf="b.returnDate" class="badge badge--success">
+                {{ b.returnDate | date:'dd/MM/yyyy' }}
+              </span>
+              <span *ngIf="!b.returnDate" class="badge badge--warning">Pending</span>
+            </td>
+            <td class="cell-actions">
+              <button *ngIf="!b.returnDate"
+                      class="btn btn-primary btn-sm"
+                      (click)="returnBook(b.borrowId)">
+                Return
+              </button>
+              <span *ngIf="b.returnDate" class="badge badge--success badge--plain">Returned</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

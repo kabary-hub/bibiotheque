@@ -1,7 +1,1 @@
-table caption {
-    caption-side: top;
-}
-
-.badge {
-    font-weight: 500;
-}
+/* All styles come from the global design system (components.css + tokens.css) */

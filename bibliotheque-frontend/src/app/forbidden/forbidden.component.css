@@ -1,4 +1,5 @@
-.forbidden {
-    margin-top: 200px;
-    font-size: 50px;
+/* Forbidden uses global .state and .state--error classes from components.css */
+.state--error .state-icon {
+  background-color: var(--c-danger-bg);
+  color: var(--c-danger-fg);
 }

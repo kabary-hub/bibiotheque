@@ -1,0 +1,14 @@
+.app-main {
+  min-height: calc(100vh - var(--h-header));
+  background-color: var(--c-canvas-soft);
+}
+
+.app-main__inner {
+  max-width: var(--w-content);
+  margin: 0 auto;
+  padding: var(--sp-6) var(--sp-5);
+}
+
+@media (max-width: 640px) {
+  .app-main__inner { padding: var(--sp-4) var(--sp-4); }
+}

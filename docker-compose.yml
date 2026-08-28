@@ -6,7 +6,7 @@
 #  Une fois les trois services demarres :
 #    - interface    http://localhost:4200
 #    - API          http://localhost:8080
-#    - base MySQL   localhost:3306 (schema « bibliotheque »)
+#    - base Postgres localhost:5432 (base « bibliotheque »)
 #
 #  La cle « version: » n'est pas declaree : elle est obsolete depuis
 #  Compose v2 et provoque un avertissement.
@@ -18,46 +18,51 @@ services:
   #  Base de donnees
   # ---------------------------------------------------------------------------
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: bibliotheque-db
     restart: unless-stopped
 
     environment:
-      # MYSQL_DATABASE demande a l'image de creer le schema au tout premier
-      # demarrage. Sans lui, Hibernate trouverait un serveur MySQL joignable
-      # mais aucune base « bibliotheque » ou ecrire.
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-bibliotheque}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+      # POSTGRES_DB demande a l'image de creer la base au tout premier
+      # demarrage. Sans lui, Hibernate trouverait un serveur joignable mais
+      # aucune base « bibliotheque » ou ecrire.
+      POSTGRES_DB: ${POSTGRES_DB:-bibliotheque}
+      POSTGRES_USER: ${POSTGRES_USER:-bibliotheque}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
 
     ports:
-      # Publie pour pouvoir inspecter la base depuis l'hote
-      # (SELECT * FROM Books;) sans passer par un shell dans le conteneur.
-      - "3306:3306"
+      # Publie pour pouvoir inspecter la base depuis l'hote (psql, DBeaver)
+      # sans passer par un shell dans le conteneur.
+      - "5432:5432"
 
     volumes:
       # C'est ce volume nomme qui fait survivre les donnees a un
       # « docker compose down » suivi d'un « up ». Sans lui, la couche
       # inscriptible du conteneur disparait avec le conteneur, et la base
       # repart vide a chaque fois.
-      - db-data:/var/lib/mysql
+      #
+      # Le nom a change en meme temps que le moteur : « pg-data » et non
+      # « db-data ». PostgreSQL refuse de demarrer sur un repertoire non vide
+      # qui ne porte pas son fichier PG_VERSION — reutiliser l'ancien volume
+      # MySQL echouerait. Il est laisse intact plutot qu'ecrase.
+      - pg-data:/var/lib/postgresql/data
 
     healthcheck:
-      # Le point cle de l'exercice. « depends_on » seul n'attend que le
-      # DEMARRAGE du conteneur, pas la DISPONIBILITE du serveur : MySQL met
-      # plusieurs dizaines de secondes a initialiser ses fichiers au premier
+      # « depends_on » seul n'attend que le DEMARRAGE du conteneur, pas la
+      # DISPONIBILITE du serveur : PostgreSQL initialise son cluster au premier
       # lancement. Le backend demarrerait pendant ce temps, echouerait a se
       # connecter, et Spring Boot s'arreterait.
       #
-      # mysqladmin ping interroge reellement le serveur. Le conteneur n'est
-      # declare « healthy » que lorsqu'il repond.
+      # pg_isready interroge reellement le serveur. Le conteneur n'est declare
+      # « healthy » que lorsqu'il repond.
       #
       # $$ echappe le $ : sans cela, Compose tenterait de substituer la
       # variable lui-meme au lieu de la laisser au shell du conteneur.
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 30
-      start_period: 40s
+      start_period: 20s
 
     networks:
       - bibliotheque-net
@@ -88,15 +93,15 @@ services:
       # soulignements).
       #
       # « db » est le nom du service : a l'interieur du reseau Docker, il est
-      # resolu en l'adresse IP du conteneur MySQL. « localhost » y designerait
-      # le conteneur backend lui-meme, ou rien n'ecoute sur 3306.
+      # resolu en l'adresse IP du conteneur PostgreSQL. « localhost » y designerait
+      # le conteneur backend lui-meme, ou rien n'ecoute sur 5432.
       #
-      # allowPublicKeyRetrieval + useSSL=false : MySQL 8 authentifie par defaut
-      # avec caching_sha2_password, qui exige soit TLS, soit la recuperation de
-      # la cle publique du serveur. Sans ces parametres, la connexion echoue.
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-bibliotheque}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+      # PostgreSQL n'a pas besoin des parametres que MySQL 8 exigeait
+      # (allowPublicKeyRetrieval, useSSL, serverTimezone) : son pilote negocie
+      # la connexion sans eux et travaille en UTC par defaut.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-bibliotheque}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-bibliotheque}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
 
     ports:
       # Ce mappage n'est pas un confort, il est INDISPENSABLE au
@@ -148,14 +153,15 @@ services:
   #  inserer le premier administrateur en SQL a la main.
   #
   #  Ce conteneur s'execute une fois, insere le compte administrateur, un
-  #  compte lecteur et six livres, puis s'arrete. Son etat final « Exited (0) »
+  #  compte lecteur, les cinq livres L1 a L5 et les trois adherents A1 a A3, puis
+#  s'arrete. Son etat final « Exited (0) »
   #  est le comportement attendu, pas une panne.
   # ---------------------------------------------------------------------------
   seed:
-    # Reutilise l'image de MySQL, deja presente : elle embarque le client
-    # « mysql » dont le script a besoin. Aucune image supplementaire a
+    # Reutilise l'image de PostgreSQL, deja presente : elle embarque le client
+    # « psql » dont le script a besoin. Aucune image supplementaire a
     # telecharger.
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: bibliotheque-seed
 
     # Le conteneur ne doit pas etre relance apres sa sortie : c'est une tache
@@ -170,14 +176,18 @@ services:
         condition: service_started
 
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-bibliotheque}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+      POSTGRES_DB: ${POSTGRES_DB:-bibliotheque}
+      POSTGRES_USER: ${POSTGRES_USER:-bibliotheque}
+      # PGPASSWORD est lue directement par psql : elle evite d'avoir a passer
+      # le mot de passe en argument, ou de creer un fichier .pgpass.
+      PGPASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
 
     volumes:
       - ./docker/seed.sql:/seed/seed.sql:ro
       - ./docker/seed-entrypoint.sh:/seed/entrypoint.sh:ro
 
-    entrypoint: ["/bin/bash", "/seed/entrypoint.sh"]
+    # postgres:16-alpine n'embarque pas bash, seulement le shell d'Alpine.
+    entrypoint: ["/bin/sh", "/seed/entrypoint.sh"]
 
     networks:
       - bibliotheque-net
@@ -188,4 +198,4 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:
+  pg-data:

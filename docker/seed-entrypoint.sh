@@ -1,38 +1,42 @@
-#!/bin/bash
+#!/bin/sh
 # =============================================================================
 #  Point d'entree du service « seed »
 # =============================================================================
 #  Attend que les tables existent, puis insere le jeu de donnees initial.
 #
 #  Pourquoi une attente active plutot qu'un depends_on ?
-#  Le healthcheck de « db » garantit que MySQL repond, pas que les tables
+#  Le healthcheck de « db » garantit que PostgreSQL repond, pas que les tables
 #  existent : ce sont Hibernate et ddl-auto=update qui les creent, au demarrage
 #  du backend. Compose ne sait pas attendre cet evenement-la. On interroge donc
-#  la base jusqu'a ce que la table « books » soit interrogeable.
+#  la base jusqu'a ce que chaque table soit interrogeable.
+#
+#  /bin/sh et non /bin/bash : postgres:16-alpine n'embarque pas bash.
 # =============================================================================
 
-set -euo pipefail
+set -eu
 
 DB_HOST="${DB_HOST:-db}"
-DB_NAME="${MYSQL_DATABASE:-bibliotheque}"
-DB_PASS="${MYSQL_ROOT_PASSWORD:-mysql}"
+DB_NAME="${POSTGRES_DB:-bibliotheque}"
+DB_USER="${POSTGRES_USER:-bibliotheque}"
+# PGPASSWORD est fournie par docker-compose.yml et lue directement par psql.
+
+PSQL="psql -h $DB_HOST -U $DB_USER -d $DB_NAME -v ON_ERROR_STOP=1"
 
 # Toutes les tables que seed.sql va manipuler, et non une seule.
 #
 # Hibernate les cree une par une : attendre « books » uniquement laissait
-# passer le script alors que « users » n'existait pas encore, d'ou un
-# « ERROR 1146: Table 'bibliotheque.users' doesn't exist » en pleine insertion.
-# C'est une condition de course, invisible tant que l'ordre de creation est
-# favorable.
-REQUIRED_TABLES="books users role user_role"
+# passer le script alors que « users » n'existait pas encore, d'ou un echec en
+# pleine insertion. C'est une condition de course, invisible tant que l'ordre
+# de creation reste favorable.
+REQUIRED_TABLES="books users role user_role borrow reservation"
 
 MAX_ATTEMPTS=60
 attempt=0
 
 tables_ready() {
     for table in $REQUIRED_TABLES; do
-        mysql -h "$DB_HOST" -u root -p"$DB_PASS" "$DB_NAME" \
-              -e "SELECT 1 FROM \`$table\` LIMIT 1;" >/dev/null 2>&1 || return 1
+        $PSQL -tAc "SELECT to_regclass('public.$table');" 2>/dev/null \
+            | grep -q "^$table$" || return 1
     done
     return 0
 }
@@ -53,19 +57,12 @@ done
 
 echo "[seed] Tables detectees. Insertion du jeu de donnees initial."
 
-mysql -h "$DB_HOST" -u root -p"$DB_PASS" "$DB_NAME" < /seed/seed.sql
-
-# hibernate_sequence alimente les identifiants des entites en GenerationType.AUTO
-# (Users et Books). Les lignes ci-dessus ayant ete inserees avec des identifiants
-# explicites, il faut avancer le compteur au-dela, sinon la prochaine creation
-# depuis l'application entrerait en collision avec une cle deja prise.
-#
-# L'echec est tolere : selon la version d'Hibernate, cette table peut ne pas
-# exister, ce qui n'est pas une erreur.
-mysql -h "$DB_HOST" -u root -p"$DB_PASS" "$DB_NAME" \
-      -e "UPDATE hibernate_sequence SET next_val = 100 WHERE next_val < 100;" \
-      >/dev/null 2>&1 || echo "[seed] Pas de table hibernate_sequence : ignore."
+# ON_ERROR_STOP=1 : sans lui, psql poursuit apres une instruction en echec et
+# sort avec le code 0. Le service paraitrait avoir reussi sur une base a moitie
+# remplie.
+$PSQL -f /seed/seed.sql
 
 echo "[seed] Termine."
 echo "[seed] Administrateur : admin / admin123"
 echo "[seed] Lecteur        : lecteur / admin123"
+echo "[seed] Adherents de l'epreuve : a1_reservataire, a2_quota, a3_emprunteur / admin123"

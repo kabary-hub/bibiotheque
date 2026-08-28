@@ -34,7 +34,7 @@ import java.util.List;
  *
  * Aucune logique metier ici : chaque methode valide son entree, delegue au
  * service et traduit le retour en code HTTP. Les erreurs ne sont pas attrapees
- * non plus, ReservationExceptionHandler s'en charge.
+ * non plus, ApiExceptionHandler s'en charge.
  */
 @CrossOrigin("http://localhost:4200")
 @RestController

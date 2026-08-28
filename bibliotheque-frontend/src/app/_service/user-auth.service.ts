@@ -31,12 +31,12 @@ export class UserAuthService {
     return JSON.parse(localStorage.getItem('userId')!);
   }
 
-  public setName(userId: number) {
-    localStorage.setItem('name', JSON.stringify(userId));
+  public setName(name: string) {
+    localStorage.setItem('name', name);
   }
 
-  public getName() {
-    return JSON.parse(localStorage.getItem('name')!);
+  public getName(): string {
+    return localStorage.getItem('name') ?? '';
   }
 
   public clear() {

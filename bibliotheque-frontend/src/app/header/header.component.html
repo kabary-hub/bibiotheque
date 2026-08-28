@@ -1,53 +1,54 @@
-<header>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" style="color: rgb(241, 223, 223);" href="#">Library Management System</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+<nav class="app-nav" role="navigation" aria-label="Navigation principale">
+  <div class="app-nav__inner">
 
-          <li class="nav-item">
-            <a routerLink="/books" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['Admin'])">Book List</a>
-          </li>
+    <a routerLink="/" class="app-nav__brand" aria-label="Accueil">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <span>Bibliothèque</span>
+    </a>
 
-          <li class="nav-item">
-            <a routerLink="/create-book" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['Admin'])">Add Book</a>
-          </li>
+    <button class="app-nav__toggle" type="button"
+            (click)="menuOpen = !menuOpen"
+            [attr.aria-expanded]="menuOpen"
+            aria-controls="main-menu"
+            aria-label="Menu">
+      <svg *ngIf="!menuOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+      <svg *ngIf="menuOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
 
-          <li class="nav-item">
-            <a routerLink="/users" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['Admin'])">User List</a>
-          </li>
+    <div class="app-nav__menu" id="main-menu" [class.app-nav__menu--open]="menuOpen">
+      <ul class="app-nav__links" role="list">
 
-          <li class="nav-item">
-            <a routerLink="/register-user" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['Admin'])">Register User</a>
-          </li>
+        <ng-container *ngIf="userService.roleMatch(['Admin'])">
+          <li><a routerLink="/books"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Books</a></li>
+          <li><a routerLink="/create-book"  routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Add Book</a></li>
+          <li><a routerLink="/users"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Users</a></li>
+          <li><a routerLink="/register-user" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Add User</a></li>
+          <li><a routerLink="/reservations" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Réservations</a></li>
+        </ng-container>
 
-          <li class="nav-item">
-            <a routerLink="/reservations" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['Admin'])">Réservations</a>
-          </li>
+        <ng-container *ngIf="userService.roleMatch(['User'])">
+          <li><a routerLink="/my-books"    routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">My Books</a></li>
+          <li><a routerLink="/borrow-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Borrow</a></li>
+          <li><a routerLink="/return-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Return</a></li>
+        </ng-container>
 
-          <li class="nav-item">
-            <a routerLink="/borrow-book" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['User'])">Borrow Books</a>
-          </li>
+      </ul>
 
-          <li class="nav-item">
-            <a routerLink="/return-book" routerLinkActive="active" class="nav-link" *ngIf="userService.roleMatch(['User'])">Return Books</a>
-          </li>
-
-          <li class="nav-item right-text" *ngIf="isLoggedIn()">
-            <div class="nav-link disabled text-right">
-              <strong>
-                Hey {{name}}
-              </strong>
-            </div>
-          </li>
-
-        </ul>
-        <button *ngIf="!isLoggedIn()" type="button" class="btn btn-success" routerLink="/login">Login</button>
-        <button *ngIf="isLoggedIn()" type="button" class="btn btn-danger" (click)="logout()">Logout</button>
+      <div class="app-nav__end">
+        <span *ngIf="isLoggedIn()" class="app-nav__user" [attr.aria-label]="'Connecté en tant que ' + name">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          {{ name }}
+        </span>
+        <button *ngIf="!isLoggedIn()" class="btn btn-primary btn-sm" routerLink="/login" (click)="menuOpen=false">Sign in</button>
+        <button *ngIf="isLoggedIn()"  class="btn btn-secondary btn-sm" (click)="logout()">Sign out</button>
       </div>
     </div>
-  </nav>
-</header>
+
+  </div>
+</nav>

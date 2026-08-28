@@ -1,13 +1,12 @@
-<div class="reservations">
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Reservations</h2>
+      <p class="card-subtitle">Reserve unavailable books for members and track active reservations.</p>
+    </div>
+  </div>
 
-  <h2>Gestion des reservations</h2>
-  <p class="text-muted">
-    Reserver un livre indisponible pour un adherent, suivre les reservations en cours
-    et les annuler.
-  </p>
-
-  <!-- ================= Formulaire de creation ================= -->
-
+  <!-- ================= Formulaire de création ================= -->
   <app-reservation-form
     [livres]="livres"
     [adherents]="adherents"
@@ -19,68 +18,73 @@
     (reessayerReferentiels)="chargerReferentiels()">
   </app-reservation-form>
 
-  <!-- Succes d'une creation ou d'une annulation -->
-  <div *ngIf="messageSucces" class="alert alert-success alert-dismissible" role="status">
-    {{ messageSucces }}
-    <button type="button" class="btn-close" aria-label="Fermer"
-            (click)="effacerMessages()"></button>
+  <!-- Succès / erreur annulation -->
+  <div style="padding: 0 var(--sp-5)">
+    <div *ngIf="messageSucces" class="alert alert--success" role="status">
+      <div class="alert-body">{{ messageSucces }}</div>
+      <button class="btn-close" (click)="effacerMessages()" aria-label="Close">&#x2715;</button>
+    </div>
+    <div *ngIf="erreurAnnulation" class="alert alert--danger" role="alert">
+      <div class="alert-body">
+        <strong *ngIf="erreurAnnulation.regle" class="rule-tag">{{ erreurAnnulation.regle }}</strong>
+        {{ erreurAnnulation.message }}
+      </div>
+    </div>
   </div>
 
-  <!-- Refus metier sur une annulation (409 RG-05) -->
-  <div *ngIf="erreurAnnulation" class="alert alert-danger" role="alert">
-    <strong *ngIf="erreurAnnulation.regle">{{ erreurAnnulation.regle }} — </strong>
-    {{ erreurAnnulation.message }}
-  </div>
-
-  <!-- ================= Filtre ================= -->
-
-  <div class="row align-items-end mb-3">
-    <div class="col-auto">
-      <label for="filtre-statut" class="form-label">Filtrer par statut</label>
-      <select id="filtre-statut" class="form-select"
+  <!-- ================= Barre de filtre ================= -->
+  <div class="toolbar">
+    <div class="field">
+      <label class="label" for="filtre-statut">Filter by status</label>
+      <select id="filtre-statut" class="select"
               [(ngModel)]="filtreStatut" (ngModelChange)="surChangementFiltre()"
               name="filtreStatut">
-        <option value="">Tous</option>
+        <option value="">All</option>
         <option *ngFor="let s of statuts" [value]="s.code">{{ s.libelle }}</option>
       </select>
     </div>
-    <div class="col-auto">
-      <button type="button" class="btn btn-outline-secondary"
-              (click)="charger()" [disabled]="etat === 'chargement'">
-        Rafraichir
-      </button>
-    </div>
+    <div class="toolbar-spacer"></div>
+    <button type="button" class="btn btn-secondary btn-sm"
+            (click)="charger()" [disabled]="etat === 'chargement'">
+      Refresh
+    </button>
   </div>
 
-  <!-- ================= Les quatre etats ================= -->
-
   <!-- 1. Chargement -->
-  <div *ngIf="etat === 'chargement'" class="etat etat-chargement" role="status">
-    <div class="spinner-border text-primary" aria-hidden="true"></div>
-    <p class="mt-2 mb-0">Chargement des reservations...</p>
+  <div *ngIf="etat === 'chargement'" class="state" role="status">
+    <div class="spinner"></div>
+    <p class="state-text">Loading reservations...</p>
   </div>
 
   <!-- 2. Erreur -->
-  <div *ngIf="etat === 'erreur'" class="alert alert-danger" role="alert">
-    <h5 class="alert-heading">Impossible de charger les reservations</h5>
-    <p class="mb-2">{{ erreurListe?.message }}</p>
-    <button type="button" class="btn btn-danger" (click)="charger()">Reessayer</button>
+  <div *ngIf="etat === 'erreur'" class="state state--error">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <p class="state-title">Unable to load reservations</p>
+    <p class="state-text">{{ erreurListe?.message }}</p>
+    <button type="button" class="btn btn-danger btn-sm" (click)="charger()">Retry</button>
   </div>
 
   <!-- 3. Liste vide -->
-  <div *ngIf="etat === 'vide'" class="etat etat-vide">
-    <p class="mb-1"><strong>Aucune reservation.</strong></p>
-    <p class="text-muted mb-0" *ngIf="filtreStatut === ''">
-      Aucune reservation n'a encore ete enregistree. Utilisez le formulaire ci-dessus
-      pour en creer une.
+  <div *ngIf="etat === 'vide'" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </div>
+    <p class="state-title">No reservations</p>
+    <p class="state-text" *ngIf="filtreStatut === ''">
+      No reservation has been recorded yet. Use the form above to create one.
     </p>
-    <p class="text-muted mb-0" *ngIf="filtreStatut !== ''">
-      Aucune reservation ne porte ce statut. Choisissez « Tous » pour voir la liste
-      complete.
+    <p class="state-text" *ngIf="filtreStatut !== ''">
+      No reservation matches this status. Choose « All » to see the full list.
     </p>
   </div>
 
-  <!-- 4. Donnees -->
+  <!-- 4. Données -->
   <app-reservation-list
     *ngIf="etat === 'donnees'"
     [reservations]="reservations"
@@ -90,43 +94,33 @@
 </div>
 
 <!-- ================= Confirmation d'annulation ================= -->
-<!--
-  Modale maison : bootstrap n'est charge que par sa feuille de style, son
-  JavaScript n'est pas dans le bundle. Un confirm() natif ferait l'affaire mais
-  bloque le navigateur, comme l'alert() que l'enonce interdit.
--->
-<div class="voile" *ngIf="aAnnuler" (click)="fermerConfirmation()"></div>
+<div class="overlay" *ngIf="aAnnuler" (click)="fermerConfirmation()" aria-hidden="true"></div>
 
-<div class="modal d-block" *ngIf="aAnnuler" role="dialog" aria-modal="true"
-     aria-labelledby="titre-confirmation">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="titre-confirmation">Confirmer l'annulation</h5>
-      </div>
-      <div class="modal-body">
-        <p>
-          Annuler la reservation n°{{ aAnnuler.id }} de
-          <strong>{{ aAnnuler.adherentNom }}</strong> sur
-          <strong>« {{ aAnnuler.livreTitre }} »</strong> ?
-        </p>
-        <p class="text-muted mb-0">
-          Le statut passera a <strong>Annulee</strong>. Cette transition est definitive :
-          une reservation annulee ne peut plus etre reactivee.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary"
-                (click)="fermerConfirmation()" [disabled]="annulationEnCours">
-          Retour
-        </button>
-        <button type="button" class="btn btn-danger"
-                (click)="confirmerAnnulation()" [disabled]="annulationEnCours">
-          <span *ngIf="annulationEnCours" class="spinner-border spinner-border-sm"
-                aria-hidden="true"></span>
-          {{ annulationEnCours ? 'Annulation...' : 'Confirmer' }}
-        </button>
-      </div>
+<div class="modal" *ngIf="aAnnuler" role="dialog" aria-modal="true" aria-labelledby="titre-confirmation">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="modal-title" id="titre-confirmation">Confirm cancellation</h3>
+    </div>
+    <div class="modal-body">
+      <p>
+        Cancel reservation #{{ aAnnuler.id }} of
+        <strong>{{ aAnnuler.adherentNom }}</strong> for
+        <strong>« {{ aAnnuler.livreTitre }} »</strong>?
+      </p>
+      <p style="margin:0; color:var(--c-ink-muted); font-size:var(--fs-sm)">
+        The status will change to <strong>Cancelled</strong>. This transition is final and cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary"
+              (click)="fermerConfirmation()" [disabled]="annulationEnCours">
+        Back
+      </button>
+      <button type="button" class="btn btn-danger"
+              (click)="confirmerAnnulation()" [disabled]="annulationEnCours">
+        <span *ngIf="annulationEnCours" class="spinner spinner--sm" aria-hidden="true"></span>
+        {{ annulationEnCours ? 'Cancelling...' : 'Confirm' }}
+      </button>
     </div>
   </div>
 </div>

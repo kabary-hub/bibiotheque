@@ -1,0 +1,157 @@
+/* ===========================================================================
+   Jetons de design
+   ===========================================================================
+   Inspires du systeme visuel public de Stripe : le violet « blurple » #635bff,
+   l'encre bleu-nuit #0a2540 plutot que du noir pur, le fond gris froid #f6f9fc,
+   les filets #e3e8ee, et les couleurs de pastilles de leur tableau de bord.
+
+   La famille Sohne de Stripe est proprietaire. On lui substitue la pile de
+   polices systeme, celle-la meme que Stripe declare en repli : elle rend bien
+   sur les trois systemes, ne coute aucune requete reseau, et fonctionne hors
+   ligne — ce qui compte pour une application servie par nginx en local.
+
+   Toutes les valeurs de l'interface passent par ces variables. Une couleur
+   ecrite en dur ailleurs est un bug : elle echappera au prochain reglage.
+   =========================================================================== */
+
+:root {
+
+    /* --- Marque ---------------------------------------------------------- */
+    --c-primary-50:   #f5f4ff;
+    --c-primary-100:  #e6e4ff;
+    --c-primary-200:  #c7c3ff;
+    --c-primary-400:  #8b85ff;
+    --c-primary:      #635bff;
+    --c-primary-600:  #5348e8;
+    --c-primary-700:  #4434d4;
+    --c-primary-800:  #2e2b8c;
+
+    /* --- Encre ----------------------------------------------------------- */
+    /* Jamais de noir pur : Stripe pose un bleu tres sombre, qui adoucit le
+       contraste sans le reduire sous le seuil AA. */
+    --c-ink:          #0a2540;
+    --c-ink-2:        #273951;
+    --c-ink-muted:    #64748d;
+    --c-ink-subtle:   #8792a2;
+    --c-on-primary:   #ffffff;
+
+    /* --- Surfaces -------------------------------------------------------- */
+    --c-canvas:       #ffffff;
+    --c-canvas-soft:  #f6f9fc;
+    --c-canvas-sunk:  #eef3f9;
+    --c-overlay:      rgba(10, 37, 64, .48);
+
+    /* --- Filets ---------------------------------------------------------- */
+    --c-line:         #e3e8ee;
+    --c-line-strong:  #c9d2dd;
+
+    /* --- Semantique ------------------------------------------------------ */
+    /* Chaque etat a un fond, un texte et un filet : une pastille lisible
+       demande les trois, pas seulement une couleur. */
+    --c-success-bg:   #cbf4c9;
+    --c-success-fg:   #0e6245;
+    --c-success-line: #a9e5a6;
+    --c-success:      #09825d;
+
+    --c-warning-bg:   #f8e5b9;
+    --c-warning-fg:   #983705;
+    --c-warning-line: #efd08a;
+    --c-warning:      #bb5504;
+
+    --c-danger-bg:    #ffe7f2;
+    --c-danger-fg:    #a41c4e;
+    --c-danger-line:  #f8cddf;
+    --c-danger:       #cd3d64;
+
+    --c-info-bg:      #d6ecff;
+    --c-info-fg:      #3d4eac;
+    --c-info-line:    #b3d9fb;
+
+    --c-neutral-bg:   #e3e8ee;
+    --c-neutral-fg:   #4f566b;
+    --c-neutral-line: #cfd7e0;
+
+    /* --- Typographie ----------------------------------------------------- */
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji";
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+
+    --fs-xs:   0.75rem;   /* 12px — etiquettes, mentions */
+    --fs-sm:   0.8125rem; /* 13px — texte secondaire, cellules denses */
+    --fs-base: 0.9375rem; /* 15px — corps */
+    --fs-md:   1.0625rem; /* 17px */
+    --fs-lg:   1.25rem;   /* 20px — titres de carte */
+    --fs-xl:   1.5rem;    /* 24px — titre de page */
+    --fs-2xl:  2rem;      /* 32px */
+    --fs-3xl:  2.5rem;    /* 40px — accroche */
+
+    --fw-regular:  400;
+    --fw-medium:   500;
+    --fw-semibold: 600;
+    --fw-bold:     700;
+
+    --lh-tight:  1.2;
+    --lh-snug:   1.35;
+    --lh-normal: 1.6;
+
+    /* Le resserrement du tracking sur les grands titres est une signature du
+       systeme : il empeche les capitales de paraitre espacees a grande taille. */
+    --ls-tight:  -0.02em;
+    --ls-tighter: -0.03em;
+    --ls-wide:    0.02em;
+
+    /* --- Espacement — echelle de 4 ---------------------------------------- */
+    --sp-1:  0.25rem;  /*  4px */
+    --sp-2:  0.5rem;   /*  8px */
+    --sp-3:  0.75rem;  /* 12px */
+    --sp-4:  1rem;     /* 16px */
+    --sp-5:  1.5rem;   /* 24px */
+    --sp-6:  2rem;     /* 32px */
+    --sp-7:  3rem;     /* 48px */
+    --sp-8:  4rem;     /* 64px */
+
+    /* --- Rayons ---------------------------------------------------------- */
+    --r-sm:   4px;
+    --r-md:   6px;
+    --r-lg:   8px;
+    --r-xl:   12px;
+    --r-2xl:  16px;
+    --r-full: 999px;
+
+    /* --- Ombres ---------------------------------------------------------- */
+    /* Superposees, jamais uniques : une ombre proche et serree pour le contact,
+       une lointaine et diffuse pour l'elevation. C'est ce qui donne la
+       profondeur des cartes de Stripe. */
+    --shadow-xs: 0 1px 1px rgba(10, 37, 64, .06);
+    --shadow-sm: 0 1px 2px rgba(10, 37, 64, .06),
+                 0 1px 3px rgba(10, 37, 64, .05);
+    --shadow-md: 0 2px 5px -1px rgba(50, 50, 93, .10),
+                 0 1px 3px -1px rgba(10, 37, 64, .08);
+    --shadow-lg: 0 13px 27px -5px rgba(50, 50, 93, .15),
+                 0 8px 16px -8px rgba(10, 37, 64, .20);
+    --shadow-focus: 0 0 0 3px rgba(99, 91, 255, .28);
+    --shadow-focus-danger: 0 0 0 3px rgba(205, 61, 100, .25);
+
+    /* --- Mouvement ------------------------------------------------------- */
+    --t-fast: 120ms cubic-bezier(.4, 0, .2, 1);
+    --t-base: 180ms cubic-bezier(.4, 0, .2, 1);
+
+    /* --- Gabarit --------------------------------------------------------- */
+    --w-content: 1180px;
+    --h-header:  60px;
+    --z-header:  100;
+    --z-overlay: 1000;
+    --z-modal:   1001;
+    --z-toast:   1100;
+}
+
+/* Respecte le reglage systeme « reduire les animations ». Ce n'est pas un
+   confort : les mouvements declenchent des malaises chez certaines personnes. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --t-fast: 1ms;
+        --t-base: 1ms;
+    }
+}

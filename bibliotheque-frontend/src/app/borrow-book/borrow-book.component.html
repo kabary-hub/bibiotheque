@@ -1,25 +1,64 @@
-<h2>List of available books in the library</h2>
-<table class="table table-success table-striped">
-    <thead>
-        <tr>
-            <th> Book ID </th>
-            <th> Name </th>
-            <th> Author </th>
-            <th> Genre </th>
-            <th> Number of copies available </th>
-            <th> Actions </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let book of books">
-            <td> {{ book.bookId }} </td>
-            <td> {{ book.bookName }} </td>
-            <td> {{ book.bookAuthor }} </td>
-            <td> {{ book.bookGenre }} </td>
-            <td> {{ book.noOfCopies }} </td>
-            <td>
-                <button (click) = "borrowBook(book.bookId)" class="btn btn-success"> Borrow </button>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Borrow a Book</h2>
+      <p class="card-subtitle">Select a book to borrow. Only available copies can be borrowed.</p>
+    </div>
+  </div>
+
+  <div *ngIf="succes" class="alert alert--success" style="margin: var(--sp-4) var(--sp-5) 0" role="status">
+    <div class="alert-body">{{ succes }}</div>
+    <button class="btn-close" (click)="succes=null" aria-label="Close">&#x2715;</button>
+  </div>
+  <div *ngIf="erreur" class="alert alert--danger" style="margin: var(--sp-4) var(--sp-5) 0" role="alert">
+    <div class="alert-body">{{ erreur }}</div>
+    <button class="btn-close" (click)="erreur=null" aria-label="Close">&#x2715;</button>
+  </div>
+
+  <div *ngIf="!books" class="state">
+    <div class="spinner" aria-label="Loading..."></div>
+    <p class="state-text">Loading available books...</p>
+  </div>
+
+  <div *ngIf="books && books.length === 0" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <p class="state-title">No books available</p>
+    <p class="state-text">All books are currently borrowed. Check back later.</p>
+  </div>
+
+  <div *ngIf="books && books.length > 0" class="card-body--flush">
+    <div class="table-wrap">
+      <table class="table" aria-label="Available books">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Genre</th>
+            <th class="cell-numeric">Copies</th>
+            <th class="cell-actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let book of books">
+            <td data-label="Title" class="cell-strong">{{ book.bookName }}</td>
+            <td data-label="Author">{{ book.bookAuthor }}</td>
+            <td data-label="Genre"><span class="badge badge--neutral badge--plain">{{ book.bookGenre }}</span></td>
+            <td data-label="Copies" class="cell-numeric">
+              <span class="badge" [ngClass]="book.noOfCopies > 0 ? 'badge--success' : 'badge--danger'">{{ book.noOfCopies }}</span>
             </td>
-        </tr>
-    </tbody>
-</table>
+            <td class="cell-actions">
+              <button class="btn btn-primary btn-sm"
+                      [disabled]="book.noOfCopies === 0 || borrowingId === book.bookId"
+                      (click)="borrowBook(book.bookId)">
+                <span *ngIf="borrowingId === book.bookId" class="spinner spinner--sm" aria-hidden="true"></span>
+                {{ borrowingId === book.bookId ? 'Borrowing...' : 'Borrow' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

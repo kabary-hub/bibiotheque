@@ -31,7 +31,7 @@ export class ReservationListComponent {
 
     classeBadge(statut: StatutReservation): string {
         const trouve = STATUTS.find((s) => s.code === statut);
-        return trouve ? trouve.classe : 'bg-light text-dark';
+        return trouve ? trouve.classe : 'badge--neutral';
     }
 
     /**
