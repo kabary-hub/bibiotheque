@@ -30,7 +30,13 @@ export class AuthInterceptor implements HttpInterceptor {
                 } else if(err.status === 403) {
                     this.router.navigate(['/forbidden']);
                 }
-                return throwError("Some thing is wrong");
+                // L'erreur est relayee telle quelle. Elle etait auparavant
+                // remplacee par la chaine "Some thing is wrong", ce qui detruisait
+                // le corps de la reponse avant qu'aucun composant ne le voie :
+                // aucun ecran ne pouvait afficher le message du serveur, ni
+                // distinguer un 409 metier d'un backend arrete. Les redirections
+                // 401/403 ci-dessus sont inchangees.
+                return throwError(() => err);
             }
         )
     );
