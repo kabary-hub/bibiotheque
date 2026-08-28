@@ -1,0 +1,70 @@
+<div class="card mb-4">
+  <div class="card-header">Nouvelle reservation</div>
+  <div class="card-body">
+
+    <!-- Les listes deroulantes n'ont pas pu etre alimentees -->
+    <div *ngIf="erreurReferentiels" class="alert alert-warning" role="alert">
+      <p class="mb-2">
+        Impossible de charger les livres et les adherents : {{ erreurReferentiels.message }}
+      </p>
+      <button type="button" class="btn btn-sm btn-warning"
+              (click)="reessayerReferentiels.emit()">
+        Reessayer
+      </button>
+    </div>
+
+    <form (ngSubmit)="envoyer()" #formulaire="ngForm">
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label for="livre" class="form-label">Livre</label>
+          <select id="livre" name="livre" class="form-select"
+                  [(ngModel)]="livreId" [disabled]="envoiEnCours" required>
+            <option [ngValue]="null" disabled>— Choisir un livre —</option>
+            <option *ngFor="let l of livres" [ngValue]="l.bookId">
+              {{ libelleLivre(l) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label for="adherent" class="form-label">Adherent</label>
+          <select id="adherent" name="adherent" class="form-select"
+                  [(ngModel)]="adherentId" [disabled]="envoiEnCours" required>
+            <option [ngValue]="null" disabled>— Choisir un adherent —</option>
+            <option *ngFor="let a of adherents" [ngValue]="a.userId">
+              {{ libelleAdherent(a) }}
+            </option>
+          </select>
+        </div>
+
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-3"
+              [disabled]="!valide || envoiEnCours">
+        <span *ngIf="envoiEnCours" class="spinner-border spinner-border-sm"
+              aria-hidden="true"></span>
+        {{ envoiEnCours ? 'Creation...' : 'Reserver' }}
+      </button>
+
+      <span *ngIf="!valide" class="text-muted ms-2">
+        Choisissez un livre et un adherent pour activer le bouton.
+      </span>
+    </form>
+
+    <!--
+      Le refus vient du serveur et son texte est affiche tel quel : c'est lui
+      qui nomme la regle et cite le titre du livre ou le nom de l'adherent.
+      Aucun message generique n'est fabrique ici.
+    -->
+    <div *ngIf="erreur" class="alert alert-danger mt-3 mb-0" role="alert">
+      <div class="d-flex align-items-start">
+        <span class="badge bg-danger me-2">{{ erreur.statut || 'Reseau' }}</span>
+        <div>
+          <strong *ngIf="erreur.regle">{{ erreur.regle }} — </strong>{{ erreur.message }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

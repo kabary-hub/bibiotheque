@@ -1,0 +1,38 @@
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <caption class="visually-hidden">Liste des reservations</caption>
+    <thead class="table-dark">
+      <tr>
+        <th scope="col">Livre</th>
+        <th scope="col">Adherent</th>
+        <th scope="col">Statut</th>
+        <th scope="col">Date de reservation</th>
+        <th scope="col">Date d'expiration</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of reservations">
+        <td>{{ r.livreTitre }}</td>
+        <td>{{ r.adherentNom }}</td>
+        <td>
+          <span class="badge" [ngClass]="classeBadge(r.statut)">
+            {{ libelle(r.statut) }}
+          </span>
+        </td>
+        <td>{{ r.dateReservation | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td>{{ r.dateExpiration | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td>
+          <button *ngIf="estAnnulable(r.statut)" type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="demanderAnnulation(r)">
+            Annuler
+          </button>
+          <!-- Statut terminal : aucune action possible, on le dit plutot que
+               de laisser une cellule vide qui ressemblerait a un bug. -->
+          <span *ngIf="!estAnnulable(r.statut)" class="text-muted">—</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

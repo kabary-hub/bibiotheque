@@ -1,0 +1,132 @@
+<div class="reservations">
+
+  <h2>Gestion des reservations</h2>
+  <p class="text-muted">
+    Reserver un livre indisponible pour un adherent, suivre les reservations en cours
+    et les annuler.
+  </p>
+
+  <!-- ================= Formulaire de creation ================= -->
+
+  <app-reservation-form
+    [livres]="livres"
+    [adherents]="adherents"
+    [envoiEnCours]="creationEnCours"
+    [erreur]="erreurCreation"
+    [erreurReferentiels]="erreurReferentiels"
+    [jetonReinitialisation]="jetonReinitialisation"
+    (soumettre)="creer($event)"
+    (reessayerReferentiels)="chargerReferentiels()">
+  </app-reservation-form>
+
+  <!-- Succes d'une creation ou d'une annulation -->
+  <div *ngIf="messageSucces" class="alert alert-success alert-dismissible" role="status">
+    {{ messageSucces }}
+    <button type="button" class="btn-close" aria-label="Fermer"
+            (click)="effacerMessages()"></button>
+  </div>
+
+  <!-- Refus metier sur une annulation (409 RG-05) -->
+  <div *ngIf="erreurAnnulation" class="alert alert-danger" role="alert">
+    <strong *ngIf="erreurAnnulation.regle">{{ erreurAnnulation.regle }} — </strong>
+    {{ erreurAnnulation.message }}
+  </div>
+
+  <!-- ================= Filtre ================= -->
+
+  <div class="row align-items-end mb-3">
+    <div class="col-auto">
+      <label for="filtre-statut" class="form-label">Filtrer par statut</label>
+      <select id="filtre-statut" class="form-select"
+              [(ngModel)]="filtreStatut" (ngModelChange)="surChangementFiltre()"
+              name="filtreStatut">
+        <option value="">Tous</option>
+        <option *ngFor="let s of statuts" [value]="s.code">{{ s.libelle }}</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-secondary"
+              (click)="charger()" [disabled]="etat === 'chargement'">
+        Rafraichir
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= Les quatre etats ================= -->
+
+  <!-- 1. Chargement -->
+  <div *ngIf="etat === 'chargement'" class="etat etat-chargement" role="status">
+    <div class="spinner-border text-primary" aria-hidden="true"></div>
+    <p class="mt-2 mb-0">Chargement des reservations...</p>
+  </div>
+
+  <!-- 2. Erreur -->
+  <div *ngIf="etat === 'erreur'" class="alert alert-danger" role="alert">
+    <h5 class="alert-heading">Impossible de charger les reservations</h5>
+    <p class="mb-2">{{ erreurListe?.message }}</p>
+    <button type="button" class="btn btn-danger" (click)="charger()">Reessayer</button>
+  </div>
+
+  <!-- 3. Liste vide -->
+  <div *ngIf="etat === 'vide'" class="etat etat-vide">
+    <p class="mb-1"><strong>Aucune reservation.</strong></p>
+    <p class="text-muted mb-0" *ngIf="filtreStatut === ''">
+      Aucune reservation n'a encore ete enregistree. Utilisez le formulaire ci-dessus
+      pour en creer une.
+    </p>
+    <p class="text-muted mb-0" *ngIf="filtreStatut !== ''">
+      Aucune reservation ne porte ce statut. Choisissez « Tous » pour voir la liste
+      complete.
+    </p>
+  </div>
+
+  <!-- 4. Donnees -->
+  <app-reservation-list
+    *ngIf="etat === 'donnees'"
+    [reservations]="reservations"
+    (annulationDemandee)="demanderAnnulation($event)">
+  </app-reservation-list>
+
+</div>
+
+<!-- ================= Confirmation d'annulation ================= -->
+<!--
+  Modale maison : bootstrap n'est charge que par sa feuille de style, son
+  JavaScript n'est pas dans le bundle. Un confirm() natif ferait l'affaire mais
+  bloque le navigateur, comme l'alert() que l'enonce interdit.
+-->
+<div class="voile" *ngIf="aAnnuler" (click)="fermerConfirmation()"></div>
+
+<div class="modal d-block" *ngIf="aAnnuler" role="dialog" aria-modal="true"
+     aria-labelledby="titre-confirmation">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="titre-confirmation">Confirmer l'annulation</h5>
+      </div>
+      <div class="modal-body">
+        <p>
+          Annuler la reservation n°{{ aAnnuler.id }} de
+          <strong>{{ aAnnuler.adherentNom }}</strong> sur
+          <strong>« {{ aAnnuler.livreTitre }} »</strong> ?
+        </p>
+        <p class="text-muted mb-0">
+          Le statut passera a <strong>Annulee</strong>. Cette transition est definitive :
+          une reservation annulee ne peut plus etre reactivee.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary"
+                (click)="fermerConfirmation()" [disabled]="annulationEnCours">
+          Retour
+        </button>
+        <button type="button" class="btn btn-danger"
+                (click)="confirmerAnnulation()" [disabled]="annulationEnCours">
+          <span *ngIf="annulationEnCours" class="spinner-border spinner-border-sm"
+                aria-hidden="true"></span>
+          {{ annulationEnCours ? 'Annulation...' : 'Confirmer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
