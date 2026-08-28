@@ -81,10 +81,12 @@ s'affiche au-dessus de donnees valides.
 | `vide` | « Aucune reservation. » — et un second message **different selon qu'un filtre est actif ou non**, parce que « la base est vide » et « ce statut n'a aucune ligne » ne se corrigent pas de la meme facon |
 | `erreur` | Le message du serveur et un bouton **Reessayer** qui rejoue l'appel |
 
-L'etat d'erreur a ete verifie comme le demande l'enonce : `docker compose stop
-backend`, puis rafraichissement. La requete n'aboutit pas, `status` vaut 0, et
-l'ecran affiche « Le serveur est injoignable. Verifiez que le backend est demarre
-sur http://localhost:8080, puis reessayez. » Pas un chargement infini.
+L'etat `erreur` couvre deux causes distinctes. Si le serveur a repondu, son
+message est affiche. S'il n'a pas repondu du tout — backend arrete, ce que
+l'enonce demande de tester par `docker compose stop backend` — `status` vaut 0
+et aucun corps n'existe : c'est le seul cas ou le texte affiche est ecrit cote
+client, « Le serveur est injoignable. Verifiez que le backend est demarre sur
+http://localhost:8080, puis reessayez. »
 
 ## Le traitement des refus metier
 
@@ -192,6 +194,51 @@ bien repondu 201. Le filtre revient donc a « Tous » apres une creation reussie
 > de la Pull Request**. Un chemin relatif vers `epreuve/seance-3/captures/`
 > s'affiche dans le depot mais pas dans une description de PR : GitHub n'y resout
 > pas les chemins relatifs.
+
+## Ce qui a ete verifie, et comment
+
+**La compilation.** `docker compose build frontend` — construction AOT sous
+`node:16-alpine` avec `strictTemplates` actif : aucune erreur TypeScript, aucune
+erreur de gabarit. Les deux avertissements restants sont anterieurs a cette PR
+(autoprefixer sur le CSS de Bootstrap, budget de bundle : 244 kB des 590 kB
+viennent de Bootstrap et jQuery, deja presents).
+
+**Le nouvel ecran est bien servi.** `GET /reservations` sur nginx renvoie 200 —
+la reecriture SPA de `nginx.conf` fonctionne pour cette route — et le bundle
+`main.*.js` livre contient bien les chaines de l'ecran.
+
+**Le contrat dont l'ecran depend**, rejoue contre la pile complete apres
+chargement de `epreuve/seance-2/fixtures.sql` :
+
+| Appel | Resultat obtenu |
+|---|---|
+| `POST` sur L2 (0 exemplaire) | 201, avec `livreTitre` et `adherentNom` — les deux colonnes du tableau sortent d'un seul GET |
+| `POST` sur L1 (3 en rayon) | 409 · `regle: "RG-01"` |
+| `POST` en double sur L2 | 409 · `regle: "RG-02"` |
+| `POST`, 4e reservation de A2 | 409 · `regle: "RG-03"` |
+| `POST` sur le livre 9999 | 404, message renseigne, `regle` absente |
+| `PATCH .../annuler` | 200, `statut: "ANNULEE"` dans le corps — c'est cette ligne qui remplace la ligne du tableau |
+| `PATCH` une seconde fois | 409 · `regle: "RG-05"` |
+| `PATCH` sur la reservation 99999 | 404 |
+| `GET ?statut=EN_ATTENTE` | 200, 4 lignes |
+| `GET ?statut=HONOREE` | 200, `[]` — c'est l'etat « liste vide » sous filtre |
+| `GET ?statut=NIMPORTEQUOI` | 400, message listant les valeurs acceptees |
+
+**Le preflight CORS**, celui qui decide si l'annulation marche depuis un
+navigateur et pas seulement depuis curl :
+
+```
+OPTIONS /api/reservations/24/annuler   Origin: http://localhost:4200
+HTTP/1.1 200
+Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE
+```
+
+`PATCH` y figure grace a la modification de `CorsConfiguration` faite en
+seance 2. Sans elle, le bouton « Annuler » aurait fonctionne dans tous les tests
+d'API et echoue dans l'ecran.
+
+Le rendu de l'interface lui-meme se juge sur les quatre captures ci-dessus : il
+demande d'etre connecte a l'application.
 
 ## Verifier en local
 
