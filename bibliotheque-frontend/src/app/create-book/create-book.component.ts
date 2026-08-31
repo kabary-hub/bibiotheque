@@ -23,7 +23,7 @@ export class CreateBookComponent implements OnInit {
     this.envoiEnCours = true;
     this.booksService.createBook(this.book).subscribe({
       next: () => { this.envoiEnCours = false; this.router.navigate(['/books']); },
-      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'An error occurred.'; }
+      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'Une erreur est survenue.'; }
     });
   }
 

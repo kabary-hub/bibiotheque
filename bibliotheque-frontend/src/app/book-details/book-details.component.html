@@ -1,15 +1,15 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">Borrow history</h2>
+      <h2 class="card-title">Historique des emprunts</h2>
       <p *ngIf="book" class="card-subtitle">« {{ book.bookName }} »</p>
     </div>
-    <a routerLink="/books" class="btn btn-secondary btn-sm">← Back to books</a>
+    <a routerLink="/books" class="btn btn-secondary btn-sm">← Retour aux livres</a>
   </div>
 
   <div *ngIf="!borrow" class="state">
     <div class="spinner" aria-label="Loading..."></div>
-    <p class="state-text">Loading borrow history...</p>
+    <p class="state-text">Chargement de l'historique...</p>
   </div>
 
   <div *ngIf="borrow && borrow.length === 0" class="state">
@@ -18,8 +18,8 @@
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
       </svg>
     </div>
-    <p class="state-title">No borrow history</p>
-    <p class="state-text">This book has never been borrowed.</p>
+    <p class="state-title">Aucun historique</p>
+    <p class="state-text">Ce livre n'a jamais été emprunté.</p>
   </div>
 
   <div *ngIf="borrow && borrow.length > 0" class="card-body--flush">
@@ -27,20 +27,20 @@
       <table class="table" aria-label="Borrow history">
         <thead>
           <tr>
-            <th>User ID</th>
-            <th>Issue Date</th>
-            <th>Return Date</th>
+            <th>ID Utilisateur</th>
+            <th>Date d'emprunt</th>
+            <th>Date de retour</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let borrower of borrow">
-            <td data-label="User ID" class="cell-strong">{{ borrower.userId }}</td>
-            <td data-label="Issue Date">{{ borrower.issueDate | date:'dd/MM/yyyy' }}</td>
-            <td data-label="Return Date">
+            <td data-label="ID Utilisateur" class="cell-strong">{{ borrower.userId }}</td>
+            <td data-label="Date d'emprunt">{{ borrower.issueDate | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Date de retour">
               <span *ngIf="borrower.returnDate" class="badge badge--success">
                 {{ borrower.returnDate | date:'dd/MM/yyyy' }}
               </span>
-              <span *ngIf="!borrower.returnDate" class="badge badge--warning">Not returned yet</span>
+              <span *ngIf="!borrower.returnDate" class="badge badge--warning">Non retourné</span>
             </td>
           </tr>
         </tbody>

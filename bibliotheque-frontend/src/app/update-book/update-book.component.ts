@@ -28,7 +28,7 @@ export class UpdateBookComponent implements OnInit {
     this.envoiEnCours = true;
     this.booksService.updateBook(this.bookId, this.book).subscribe({
       next: () => { this.envoiEnCours = false; this.router.navigate(['/books']); },
-      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'An error occurred.'; }
+      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'Une erreur est survenue.'; }
     });
   }
 
