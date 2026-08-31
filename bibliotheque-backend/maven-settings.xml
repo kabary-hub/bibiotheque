@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Reglages Maven utilises uniquement pendant la construction de l'image.
+
+  Le pom.xml declare deux depots supplementaires, « spring-milestones » et
+  « spring-snapshots » (lignes 82 a 99), vraisemblablement herites du
+  2.7.1-SNAPSHOT commente ligne 8 et jamais utilise. Consequence : Maven
+  interroge ces deux depots AVANT central pour chaque artefact, echoue, puis
+  retombe sur central.
+
+      Downloading from spring-milestones: .../maven-parent-30.pom     <- echec
+      Downloading from central:           .../maven-parent-30.pom     <- succes
+
+  Deux allers-retours inutiles par dependance. Invisible sur une connexion
+  rapide, tres couteux en dessous de quelques ko/s.
+
+  Le miroir ci-dessous redirige toutes les requetes vers Maven Central. Le
+  projet n'a besoin d'aucun artefact de jalon ni d'instantane : Spring Boot
+  2.4.5 est une version publiee, disponible sur central.
+
+  Ce fichier ne modifie pas le pom.xml, conformement aux contraintes de
+  l'epreuve : il ne vit que dans l'image de construction.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <mirrors>
+    <mirror>
+      <id>central-uniquement</id>
+      <name>Tout vers Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+</settings>

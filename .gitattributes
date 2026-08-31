@@ -1,0 +1,7 @@
+# Les scripts shell sont executes dans des conteneurs Linux.
+#
+# Sans cette regle, git les extrait avec des fins de ligne CRLF sur un poste
+# Windows. Le noyau Linux lit alors la premiere ligne comme « #!/bin/bash\r »,
+# ne trouve aucun interpreteur de ce nom, et le conteneur echoue sur un
+# « exec format error » particulierement difficile a diagnostiquer.
+*.sh text eol=lf

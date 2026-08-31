@@ -1,0 +1,191 @@
+# =============================================================================
+#  Bibliotheque — pile complete
+# =============================================================================
+#  Demarrage :  docker compose up --build
+#
+#  Une fois les trois services demarres :
+#    - interface    http://localhost:4200
+#    - API          http://localhost:8080
+#    - base MySQL   localhost:3306 (schema « bibliotheque »)
+#
+#  La cle « version: » n'est pas declaree : elle est obsolete depuis
+#  Compose v2 et provoque un avertissement.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  #  Base de donnees
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: bibliotheque-db
+    restart: unless-stopped
+
+    environment:
+      # MYSQL_DATABASE demande a l'image de creer le schema au tout premier
+      # demarrage. Sans lui, Hibernate trouverait un serveur MySQL joignable
+      # mais aucune base « bibliotheque » ou ecrire.
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bibliotheque}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+
+    ports:
+      # Publie pour pouvoir inspecter la base depuis l'hote
+      # (SELECT * FROM Books;) sans passer par un shell dans le conteneur.
+      - "3306:3306"
+
+    volumes:
+      # C'est ce volume nomme qui fait survivre les donnees a un
+      # « docker compose down » suivi d'un « up ». Sans lui, la couche
+      # inscriptible du conteneur disparait avec le conteneur, et la base
+      # repart vide a chaque fois.
+      - db-data:/var/lib/mysql
+
+    healthcheck:
+      # Le point cle de l'exercice. « depends_on » seul n'attend que le
+      # DEMARRAGE du conteneur, pas la DISPONIBILITE du serveur : MySQL met
+      # plusieurs dizaines de secondes a initialiser ses fichiers au premier
+      # lancement. Le backend demarrerait pendant ce temps, echouerait a se
+      # connecter, et Spring Boot s'arreterait.
+      #
+      # mysqladmin ping interroge reellement le serveur. Le conteneur n'est
+      # declare « healthy » que lorsqu'il repond.
+      #
+      # $$ echappe le $ : sans cela, Compose tenterait de substituer la
+      # variable lui-meme au lieu de la laisser au shell du conteneur.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  API Spring Boot
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./bibliotheque-backend
+    container_name: bibliotheque-backend
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        # « service_healthy », et non « service_started » : c'est ce qui fait
+        # attendre la fin du healthcheck ci-dessus.
+        condition: service_healthy
+
+    environment:
+      # Surcharge de application.properties SANS le modifier.
+      #
+      # Spring Boot applique un ordre de priorite entre sources de
+      # configuration : les variables d'environnement priment sur le fichier
+      # .properties embarque dans le jar. La correspondance se fait par
+      # « relaxed binding » : spring.datasource.url devient
+      # SPRING_DATASOURCE_URL (majuscules, points remplaces par des
+      # soulignements).
+      #
+      # « db » est le nom du service : a l'interieur du reseau Docker, il est
+      # resolu en l'adresse IP du conteneur MySQL. « localhost » y designerait
+      # le conteneur backend lui-meme, ou rien n'ecoute sur 3306.
+      #
+      # allowPublicKeyRetrieval + useSSL=false : MySQL 8 authentifie par defaut
+      # avec caching_sha2_password, qui exige soit TLS, soit la recuperation de
+      # la cle publique du serveur. Sans ces parametres, la connexion echoue.
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-bibliotheque}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+
+    ports:
+      # Ce mappage n'est pas un confort, il est INDISPENSABLE au
+      # fonctionnement de l'interface.
+      #
+      # Les trois services Angular appellent « http://localhost:8080 » en dur.
+      # Ce code s'execute dans le NAVIGATEUR de l'utilisateur, pas dans le
+      # conteneur frontend. « localhost » y designe donc la machine hote.
+      # Publier 8080 sur l'hote est ce qui fait aboutir ces appels.
+      #
+      # C'est aussi pourquoi remplacer l'adresse par « backend:8080 » ne
+      # marcherait pas : ce nom n'est resolvable que depuis l'interieur du
+      # reseau Docker, auquel le navigateur n'appartient pas.
+      - "8080:8080"
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  Interface Angular
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./bibliotheque-frontend
+    container_name: bibliotheque-frontend
+    restart: unless-stopped
+
+    depends_on:
+      # Simple ordre de demarrage. Pas de healthcheck ici : nginx sert des
+      # fichiers statiques et n'a besoin de rien pour repondre. Si l'API n'est
+      # pas encore prete, la page s'affiche et les appels echoueront jusqu'a
+      # ce qu'elle le soit.
+      - backend
+
+    ports:
+      # 4200 sur l'hote (le port attendu, celui de « ng serve ») vers 80 dans
+      # le conteneur (le port par defaut de nginx).
+      - "4200:80"
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  Initialisation des donnees
+  # ---------------------------------------------------------------------------
+  #  Sans ce service, un « docker compose up » sur une machine vierge donne une
+  #  application dans laquelle on ne peut pas entrer : la base est vide, aucun
+  #  compte n'existe, et POST /admin/users exige deja un jeton. Il fallait
+  #  inserer le premier administrateur en SQL a la main.
+  #
+  #  Ce conteneur s'execute une fois, insere le compte administrateur, un
+  #  compte lecteur et six livres, puis s'arrete. Son etat final « Exited (0) »
+  #  est le comportement attendu, pas une panne.
+  # ---------------------------------------------------------------------------
+  seed:
+    # Reutilise l'image de MySQL, deja presente : elle embarque le client
+    # « mysql » dont le script a besoin. Aucune image supplementaire a
+    # telecharger.
+    image: mysql:8.0
+    container_name: bibliotheque-seed
+
+    # Le conteneur ne doit pas etre relance apres sa sortie : c'est une tache
+    # ponctuelle, pas un service.
+    restart: "no"
+
+    depends_on:
+      # « service_started » suffit : le script attend lui-meme que les tables
+      # existent. Les attendre ici serait impossible — Compose sait verifier
+      # qu'un service repond, pas qu'Hibernate a fini de creer son schema.
+      backend:
+        condition: service_started
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bibliotheque}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
+
+    volumes:
+      - ./docker/seed.sql:/seed/seed.sql:ro
+      - ./docker/seed-entrypoint.sh:/seed/entrypoint.sh:ro
+
+    entrypoint: ["/bin/bash", "/seed/entrypoint.sh"]
+
+    networks:
+      - bibliotheque-net
+
+
+networks:
+  bibliotheque-net:
+    driver: bridge
+
+volumes:
+  db-data:

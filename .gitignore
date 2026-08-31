@@ -1,2 +1,10 @@
 # Réglages locaux des outils
 .claude/
+.idea/
+
+# Secrets et configuration locale de Docker Compose.
+# Le modele versionne est .env.example, sans valeur reelle.
+.env
+
+# Fichier de reglages genere par l explorateur Windows dans les dossiers d images.
+desktop.ini
