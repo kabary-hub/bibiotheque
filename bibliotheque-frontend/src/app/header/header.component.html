@@ -25,17 +25,17 @@
       <ul class="app-nav__links" role="list">
 
         <ng-container *ngIf="userService.roleMatch(['Admin'])">
-          <li><a routerLink="/books"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Books</a></li>
-          <li><a routerLink="/create-book"  routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Add Book</a></li>
-          <li><a routerLink="/users"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Users</a></li>
-          <li><a routerLink="/register-user" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Add User</a></li>
+          <li><a routerLink="/books"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Livres</a></li>
+          <li><a routerLink="/create-book"  routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Ajouter un livre</a></li>
+          <li><a routerLink="/users"        routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Utilisateurs</a></li>
+          <li><a routerLink="/register-user" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Ajouter un utilisateur</a></li>
           <li><a routerLink="/reservations" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Réservations</a></li>
         </ng-container>
 
         <ng-container *ngIf="userService.roleMatch(['User'])">
-          <li><a routerLink="/my-books"    routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">My Books</a></li>
-          <li><a routerLink="/borrow-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Borrow</a></li>
-          <li><a routerLink="/return-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Return</a></li>
+          <li><a routerLink="/my-books"    routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Mes livres</a></li>
+          <li><a routerLink="/borrow-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Emprunter</a></li>
+          <li><a routerLink="/return-book" routerLinkActive="app-nav__link--active" class="app-nav__link" (click)="menuOpen=false">Retour</a></li>
         </ng-container>
 
       </ul>
@@ -45,8 +45,8 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           {{ name }}
         </span>
-        <button *ngIf="!isLoggedIn()" class="btn btn-primary btn-sm" routerLink="/login" (click)="menuOpen=false">Sign in</button>
-        <button *ngIf="isLoggedIn()"  class="btn btn-secondary btn-sm" (click)="logout()">Sign out</button>
+        <button *ngIf="!isLoggedIn()" class="btn btn-primary btn-sm" routerLink="/login" (click)="menuOpen=false">Se connecter</button>
+        <button *ngIf="isLoggedIn()"  class="btn btn-secondary btn-sm" (click)="logout()">Se déconnecter</button>
       </div>
     </div>
 

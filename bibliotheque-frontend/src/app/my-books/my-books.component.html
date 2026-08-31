@@ -1,11 +1,11 @@
 <!-- ===== Messages globaux ===== -->
 <div *ngIf="succes" class="alert alert--success" role="status" style="margin-bottom:var(--sp-4)">
   <div class="alert-body">{{ succes }}</div>
-  <button class="btn-close" (click)="succes=null" aria-label="Close">&#x2715;</button>
+  <button class="btn-close" (click)="succes=null" aria-label="Fermer">&#x2715;</button>
 </div>
 <div *ngIf="erreur" class="alert alert--danger" role="alert" style="margin-bottom:var(--sp-4)">
   <div class="alert-body">{{ erreur }}</div>
-  <button class="btn-close" (click)="erreur=null" aria-label="Close">&#x2715;</button>
+  <button class="btn-close" (click)="erreur=null" aria-label="Fermer">&#x2715;</button>
 </div>
 
 <!-- ===================================================================== -->
@@ -14,8 +14,8 @@
 <div class="card" style="margin-bottom:var(--sp-5)">
   <div class="card-header">
     <div>
-      <h2 class="card-title">Reserve a Book</h2>
-      <p class="card-subtitle">Choose a book you'd like to reserve. You will be notified when it becomes available.</p>
+      <h2 class="card-title">Réserver un livre</h2>
+      <p class="card-subtitle">Choisissez un livre que vous souhaitez réserver. Vous serez averti de sa disponibilité.</p>
     </div>
   </div>
 
@@ -23,11 +23,11 @@
     <form (ngSubmit)="reserver()" #formReserv="ngForm">
       <div class="field">
         <label class="label" for="livreReserv">
-          Book <span class="required" aria-hidden="true">*</span>
+          Livre <span class="required" aria-hidden="true">*</span>
         </label>
         <select id="livreReserv" name="livreReserv" class="select"
                 [(ngModel)]="livreIdChoisi" [disabled]="reservationEnCours" required>
-          <option [ngValue]="null" disabled>— Choose a book —</option>
+          <option [ngValue]="null" disabled>— Choisissez un livre —</option>
           <option *ngFor="let l of livres" [ngValue]="l.bookId">
             {{ libelleLivre(l) }}
           </option>
@@ -38,10 +38,10 @@
         <button type="submit" class="btn btn-primary"
                 [disabled]="!livreIdChoisi || reservationEnCours">
           <span *ngIf="reservationEnCours" class="spinner spinner--sm" aria-hidden="true"></span>
-          {{ reservationEnCours ? 'Reserving...' : 'Reserve' }}
+          {{ reservationEnCours ? 'Réservation...' : 'Réserver' }}
         </button>
         <span *ngIf="!livreIdChoisi" style="font-size:var(--fs-sm);color:var(--c-ink-muted)">
-          Choose a book to enable the button.
+          Choisissez un livre pour activer le bouton.
         </span>
       </div>
     </form>
@@ -60,12 +60,12 @@
 <!-- ===================================================================== -->
 <div class="card" style="margin-bottom:var(--sp-5)">
   <div class="card-header">
-    <h2 class="card-title">My Reservations</h2>
+    <h2 class="card-title">Mes réservations</h2>
   </div>
 
   <div *ngIf="reservations === null" class="state" role="status">
     <div class="spinner"></div>
-    <p class="state-text">Loading reservations...</p>
+    <p class="state-text">Chargement des réservations...</p>
   </div>
 
   <div *ngIf="reservations !== null && reservations.length === 0" class="state">
@@ -74,34 +74,34 @@
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
       </svg>
     </div>
-    <p class="state-title">No reservations</p>
-    <p class="state-text">Use the form above to reserve a book.</p>
+    <p class="state-title">Aucune réservation</p>
+    <p class="state-text">Utilisez le formulaire ci-dessus pour réserver un livre.</p>
   </div>
 
   <div *ngIf="reservations !== null && reservations.length > 0" class="card-body--flush">
     <div class="table-wrap">
-      <table class="table" aria-label="My reservations">
+      <table class="table" aria-label="Mes réservations">
         <thead>
           <tr>
             <th>#</th>
-            <th>Book</th>
-            <th>Status</th>
-            <th>Reserved on</th>
-            <th>Expires on</th>
+            <th>Livre</th>
+            <th>Statut</th>
+            <th>Réservé le</th>
+            <th>Expire le</th>
             <th class="cell-actions">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let r of reservations">
             <td data-label="#" class="cell-muted">{{ r.id }}</td>
-            <td data-label="Book" class="cell-strong">{{ r.livreTitre }}</td>
-            <td data-label="Status">
+            <td data-label="Livre" class="cell-strong">{{ r.livreTitre }}</td>
+            <td data-label="Statut">
               <span class="badge" [ngClass]="classeStatut(r.statut)">{{ libelleStatut(r.statut) }}</span>
             </td>
-            <td data-label="Reserved on">{{ r.dateReservation | date:'dd/MM/yyyy' }}</td>
-            <td data-label="Expires on">{{ r.dateExpiration | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Réservé le">{{ r.dateReservation | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Expire le">{{ r.dateExpiration | date:'dd/MM/yyyy' }}</td>
             <td class="cell-actions">
-              <button *ngIf="estAnnulable(r.statut)" class="btn btn-danger-ghost btn-sm" (click)="annuler(r)">Cancel</button>
+              <button *ngIf="estAnnulable(r.statut)" class="btn btn-danger-ghost btn-sm" (click)="annuler(r)">Annuler</button>
               <span *ngIf="!estAnnulable(r.statut)" class="cell-muted">—</span>
             </td>
           </tr>
@@ -117,15 +117,15 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">My Borrows</h2>
-      <p class="card-subtitle">Your active borrows and history.</p>
+      <h2 class="card-title">Mes emprunts</h2>
+      <p class="card-subtitle">Vos emprunts actifs et leur historique.</p>
     </div>
-    <a routerLink="/borrow-book" class="btn btn-secondary btn-sm">Borrow a book</a>
+    <a routerLink="/borrow-book" class="btn btn-secondary btn-sm">Emprunter un livre</a>
   </div>
 
   <div *ngIf="borrows === null" class="state" role="status">
     <div class="spinner"></div>
-    <p class="state-text">Loading your books...</p>
+    <p class="state-text">Chargement de vos livres...</p>
   </div>
 
   <div *ngIf="borrows !== null && borrows.length === 0" class="state">
@@ -134,8 +134,8 @@
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
       </svg>
     </div>
-    <p class="state-title">No borrows yet</p>
-    <p class="state-text">You haven't borrowed any book yet.</p>
+    <p class="state-title">Aucun emprunt</p>
+    <p class="state-text">Vous n'avez pas encore emprunté de livre.</p>
   </div>
 
   <ng-container *ngIf="borrows !== null && borrows.length > 0">
@@ -143,27 +143,27 @@
     <!-- Emprunts actifs -->
     <div *ngIf="empruntsActifs.length > 0" class="card-body--flush">
       <div style="padding:var(--sp-3) var(--sp-5) var(--sp-2);font-size:var(--fs-xs);font-weight:var(--fw-semibold);text-transform:uppercase;letter-spacing:var(--ls-wide);color:var(--c-ink-muted)">
-        Currently borrowed ({{ empruntsActifs.length }})
+        Actuellement emprunté ({{ empruntsActifs.length }})
       </div>
       <div class="table-wrap">
-        <table class="table" aria-label="Active borrows">
+        <table class="table" aria-label="Emprunts actifs">
           <thead>
             <tr>
-              <th>Book ID</th>
-              <th>Book Name</th>
-              <th>Borrowed on</th>
-              <th>Due date</th>
+              <th>Identifiant du livre</th>
+              <th>Nom du livre</th>
+              <th>Emprunté le</th>
+              <th>Date d'échéance</th>
               <th class="cell-actions">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let b of empruntsActifs">
-              <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
-              <td data-label="Book Name">{{ b.bookName }}</td>
-              <td data-label="Borrowed on">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
-              <td data-label="Due date">
+              <td data-label="Identifiant du livre" class="cell-strong">{{ b.bookId }}</td>
+              <td data-label="Nom du livre">{{ b.bookName }}</td>
+              <td data-label="Emprunté le">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
+              <td data-label="Date d'échéance">
                 <span class="badge" [ngClass]="isOverdue(b) ? 'badge--danger' : 'badge--warning'">
-                  {{ b.dueDate | date:'dd/MM/yyyy' }}<span *ngIf="isOverdue(b)"> — overdue</span>
+                  {{ b.dueDate | date:'dd/MM/yyyy' }}<span *ngIf="isOverdue(b)"> — en retard</span>
                 </span>
               </td>
               <td class="cell-actions">
@@ -171,7 +171,7 @@
                         [disabled]="returningId === b.borrowId"
                         (click)="returnBook(b.borrowId)">
                   <span *ngIf="returningId === b.borrowId" class="spinner spinner--sm" aria-hidden="true"></span>
-                  {{ returningId === b.borrowId ? 'Returning...' : 'Return' }}
+                  {{ returningId === b.borrowId ? 'Retour...' : 'Retour' }}
                 </button>
               </td>
             </tr>
@@ -181,30 +181,30 @@
     </div>
 
     <div *ngIf="empruntsActifs.length === 0" class="state" style="min-height:80px">
-      <p class="state-text">No active borrows — all books returned.</p>
+      <p class="state-text">Aucun emprunt actif — tous les livres sont retournés.</p>
     </div>
 
     <!-- Historique -->
     <ng-container *ngIf="historiqueRendu.length > 0">
       <div style="padding:var(--sp-3) var(--sp-5) var(--sp-2);border-top:1px solid var(--c-line);font-size:var(--fs-xs);font-weight:var(--fw-semibold);text-transform:uppercase;letter-spacing:var(--ls-wide);color:var(--c-ink-muted)">
-        Returned ({{ historiqueRendu.length }})
+        Retourné ({{ historiqueRendu.length }})
       </div>
       <div class="table-wrap">
-        <table class="table" aria-label="Borrow history">
+        <table class="table" aria-label="Historique des emprunts">
           <thead>
             <tr>
-              <th>Book ID</th>
-              <th>Book Name</th>
-              <th>Borrowed on</th>
-              <th>Returned on</th>
+              <th>Identifiant du livre</th>
+              <th>Nom du livre</th>
+              <th>Emprunté le</th>
+              <th>Retourné le</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let b of historiqueRendu">
-              <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
-              <td data-label="Book Name">{{ b.bookName }}</td>
-              <td data-label="Borrowed on">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
-              <td data-label="Returned on">
+              <td data-label="Identifiant du livre" class="cell-strong">{{ b.bookId }}</td>
+              <td data-label="Nom du livre">{{ b.bookName }}</td>
+              <td data-label="Emprunté le">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
+              <td data-label="Retourné le">
                 <span class="badge badge--success">{{ b.returnDate | date:'dd/MM/yyyy' }}</span>
               </td>
             </tr>

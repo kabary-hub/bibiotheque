@@ -54,6 +54,10 @@ export class ReservationsComponent implements OnInit {
     annulationEnCours = false;
     erreurAnnulation: ErreurApi | null = null;
 
+    // --- Suppression ------------------------------------------------------
+    aSupprimer: Reservation | null = null;
+    suppressionEnCours = false;
+
     constructor(
         private reservationService: ReservationService,
         private booksService: BooksService,
@@ -200,10 +204,47 @@ export class ReservationsComponent implements OnInit {
                 this.erreurAnnulation = ReservationService.messageDe(err);
             }
         });
-    }
+    }  // =====================================================================
+  // Suppression
+  // =====================================================================
 
-    effacerMessages(): void {
+  demanderSuppression(reservation: Reservation): void {
+    this.aSupprimer = reservation;
+  }
+
+  fermerSuppression(): void {
+    this.aSupprimer = null;
+    this.suppressionEnCours = false;
+  }
+
+  confirmerSuppression(): void {
+    if (!this.aSupprimer) return;
+    const cible = this.aSupprimer;
+    this.suppressionEnCours = true;
+    this.messageSucces = null;
+
+    this.reservationService.supprimer(cible.id).subscribe({
+      next: () => {
+        this.suppressionEnCours = false;
+        this.aSupprimer = null;
+        this.messageSucces = `Réservation n°${cible.id} supprimée.`;
+        this.reservations = this.reservations.filter(r => r.id !== cible.id);
+        this.autoDismiss();
+      },
+      error: (err) => {
+        this.suppressionEnCours = false;
         this.messageSucces = null;
-        this.erreurCreation = null;
-    }
+        this.erreurAnnulation = ReservationService.messageDe(err);
+      }
+    });
+  }
+
+  effacerMessages(): void {
+    this.messageSucces = null;
+    this.erreurCreation = null;
+  }
+
+  private autoDismiss() {
+    setTimeout(() => { this.messageSucces = null; }, 5000);
+  }
 }

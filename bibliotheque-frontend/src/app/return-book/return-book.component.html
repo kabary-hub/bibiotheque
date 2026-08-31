@@ -1,14 +1,9 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">Return a Book</h2>
-      <p class="card-subtitle">Select a book to return to the library.</p>
+      <h2 class="card-title">Retourner un livre</h2>
+      <p class="card-subtitle">Sélectionnez un livre à rendre à la bibliothèque.</p>
     </div>
-  </div>
-
-  <div *ngIf="!borrow" class="state">
-    <div class="spinner" aria-label="Loading..."></div>
-    <p class="state-text">Loading your borrowed books...</p>
   </div>
 
   <div *ngIf="borrow && borrow.length === 0" class="state">
@@ -17,50 +12,51 @@
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
       </svg>
     </div>
-    <p class="state-title">No borrowed books</p>
-    <p class="state-text">You have no books to return at the moment.</p>
+    <p class="state-title">Aucun emprunt</p>
+    <p class="state-text">Vous n'avez aucun livre à retourner pour le moment.</p>
   </div>
 
   <div *ngIf="borrow && borrow.length > 0" class="card-body--flush">
     <div class="table-wrap">
-      <table class="table" aria-label="Borrowed books">
+      <table class="table" aria-label="Livres empruntés">
         <thead>
           <tr>
-            <th>Book ID</th>
-            <th>Book Name</th>
-            <th>Issue Date</th>
-            <th>Due Date</th>
-            <th>Return Date</th>
+            <th>Identifiant du livre</th>
+            <th>Nom du livre</th>
+            <th>Date d'émission</th>
+            <th>Date d'échéance</th>
+            <th>Date de retour</th>
             <th class="cell-actions">Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let b of borrow">
-            <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
-            <td data-label="Book Name">{{ b.bookName }}</td>
-            <td data-label="Issue Date">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
-            <td data-label="Due Date">
+          <tr *ngFor="let b of pagedBorrows">
+            <td data-label="Identifiant du livre" class="cell-strong">{{ b.bookId }}</td>
+            <td data-label="Nom du livre">{{ b.bookName }}</td>
+            <td data-label="Date d'émission">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Date d'échéance">
               <span class="badge" [ngClass]="isOverdue(b) ? 'badge--danger' : 'badge--neutral badge--plain'">
                 {{ b.dueDate | date:'dd/MM/yyyy' }}
               </span>
             </td>
-            <td data-label="Return Date">
+            <td data-label="Date de retour">
               <span *ngIf="b.returnDate" class="badge badge--success">
                 {{ b.returnDate | date:'dd/MM/yyyy' }}
               </span>
-              <span *ngIf="!b.returnDate" class="badge badge--warning">Pending</span>
+              <span *ngIf="!b.returnDate" class="badge badge--warning">En attente</span>
             </td>
             <td class="cell-actions">
               <button *ngIf="!b.returnDate"
                       class="btn btn-primary btn-sm"
                       (click)="returnBook(b.borrowId)">
-                Return
+                Retour
               </button>
-              <span *ngIf="b.returnDate" class="badge badge--success badge--plain">Returned</span>
+              <span *ngIf="b.returnDate" class="badge badge--success badge--plain">Retourné</span>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+    <app-pagination [totalItems]="borrow.length" [pageSize]="pageSize" [currentPage]="page" (pageChange)="onPageChange($event)"></app-pagination>
   </div>
 </div>

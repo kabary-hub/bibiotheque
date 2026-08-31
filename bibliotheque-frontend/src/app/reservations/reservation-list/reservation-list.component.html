@@ -1,37 +1,45 @@
 <div class="card-body--flush">
   <div class="table-wrap">
-    <table class="table" aria-label="Reservation list">
+    <table class="table" aria-label="Liste des réservations">
       <thead>
         <tr>
           <th>#</th>
-          <th>Book</th>
-          <th>Member</th>
-          <th>Status</th>
-          <th>Reserved on</th>
-          <th>Expires on</th>
+          <th>Livre</th>
+          <th>Membre</th>
+          <th>Statut</th>
+          <th>Réservé le</th>
+          <th>Expire le</th>
           <th class="cell-actions">Action</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let r of reservations">
           <td data-label="#" class="cell-muted">{{ r.id }}</td>
-          <td data-label="Book" class="cell-strong">{{ r.livreTitre }}</td>
-          <td data-label="Member">{{ r.adherentNom }}</td>
-          <td data-label="Status">
+          <td data-label="Livre" class="cell-strong">{{ r.livreTitre }}</td>
+          <td data-label="Membre">{{ r.adherentNom }}</td>
+          <td data-label="Statut">
             <span class="badge" [ngClass]="classeBadge(r.statut)">
               {{ libelle(r.statut) }}
             </span>
           </td>
-          <td data-label="Reserved on">{{ r.dateReservation | date:'dd/MM/yyyy HH:mm' }}</td>
-          <td data-label="Expires on">{{ r.dateExpiration | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td data-label="Réservé le">{{ r.dateReservation | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td data-label="Expire le">{{ r.dateExpiration | date:'dd/MM/yyyy HH:mm' }}</td>
           <td class="cell-actions">
-            <button *ngIf="estAnnulable(r.statut)"
-                    type="button"
-                    class="btn btn-danger-ghost btn-sm"
-                    (click)="demanderAnnulation(r)">
-              Cancel
-            </button>
-            <span *ngIf="!estAnnulable(r.statut)" class="cell-muted">—</span>
+            <div class="btn-group" style="display:flex;gap:var(--sp-2);justify-content:flex-end">
+              <button *ngIf="estAnnulable(r.statut)"
+                      type="button"
+                      class="btn btn-danger-ghost btn-sm"
+                      (click)="demanderAnnulation(r)">
+                Annuler
+              </button>
+              <button *ngIf="isAdmin && r.statut === 'ANNULEE'"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      (click)="demanderSuppression(r)">
+                Supprimer
+              </button>
+              <span *ngIf="!estAnnulable(r.statut) && !(isAdmin && r.statut === 'ANNULEE')" class="cell-muted">—</span>
+            </div>
           </td>
         </tr>
       </tbody>

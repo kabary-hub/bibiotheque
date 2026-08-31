@@ -1,64 +1,56 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">Books</h2>
-      <p class="card-subtitle">{{ books?.length || 0 }} book(s) in the catalogue</p>
+      <h2 class="card-title">Livres</h2>
+      <p class="card-subtitle">{{ books?.length || 0 }} livre(s) dans le catalogue</p>
     </div>
     <a routerLink="/create-book" class="btn btn-primary btn-sm">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add book
+      Ajouter un livre
     </a>
   </div>
 
-  <div *ngIf="!books" class="state">
-    <div class="spinner" aria-label="Loading..."></div>
-    <p class="state-text">Loading books...</p>
-  </div>
-
-  <div *ngIf="books && books.length === 0" class="state">
+  <div *ngIf="books.length === 0" class="state">
     <div class="state-icon" aria-hidden="true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     </div>
-    <p class="state-title">No books yet</p>
-    <p class="state-text">Add the first book to get started.</p>
-    <a routerLink="/create-book" class="btn btn-primary btn-sm">Add book</a>
+    <p class="state-title">Aucun livre</p>
+    <p class="state-text">Ajoutez le premier livre pour commencer.</p>
+    <a routerLink="/create-book" class="btn btn-primary btn-sm">Ajouter un livre</a>
   </div>
 
-  <div *ngIf="books && books.length > 0" class="card-body--flush">
+  <div *ngIf="books.length > 0" class="card-body--flush">
     <div class="table-wrap">
-      <table class="table" aria-label="Book list">
+      <table class="table" aria-label="Liste des livres">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Author</th>
+            <th>Titre</th>
+            <th>Auteur</th>
             <th>Genre</th>
-            <th class="cell-numeric">Copies</th>
+            <th class="cell-numeric">Exemplaires</th>
             <th class="cell-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let book of books">
-            <td data-label="Title" class="cell-strong">{{ book.bookName }}</td>
-            <td data-label="Author">{{ book.bookAuthor }}</td>
+          <tr *ngFor="let book of pagedBooks">
+            <td data-label="Titre" class="cell-strong">{{ book.bookName }}</td>
+            <td data-label="Auteur">{{ book.bookAuthor }}</td>
             <td data-label="Genre">
               <span class="badge badge--neutral badge--plain">{{ book.bookGenre }}</span>
             </td>
-            <td data-label="Copies" class="cell-numeric">
+            <td data-label="Exemplaires" class="cell-numeric">
               <span class="badge" [ngClass]="book.noOfCopies > 0 ? 'badge--success' : 'badge--danger'">
                 {{ book.noOfCopies }}
               </span>
             </td>
             <td class="cell-actions">
-              <div class="btn-group">
-                <button class="btn btn-secondary btn-sm" (click)="bookDetails(book.bookId)">Details</button>
-                <button class="btn btn-secondary btn-sm" (click)="updateBook(book.bookId)">Edit</button>
-                <button class="btn btn-danger-ghost btn-sm" (click)="confirmDelete(book)">Delete</button>
-              </div>
+              <app-action-menu [items]="menuItems" (action)="onMenuAction(book, $event)"></app-action-menu>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+    <app-pagination [totalItems]="books.length" [pageSize]="pageSize" [currentPage]="page" (pageChange)="onPageChange($event)"></app-pagination>
   </div>
 </div>
 
@@ -67,14 +59,14 @@
 <div class="modal" *ngIf="bookToDelete" role="dialog" aria-modal="true" aria-labelledby="del-title">
   <div class="modal-panel">
     <div class="modal-header">
-      <h3 class="modal-title" id="del-title">Delete book?</h3>
+      <h3 class="modal-title" id="del-title">Supprimer le livre ?</h3>
     </div>
     <div class="modal-body">
-      <p>You are about to permanently delete <strong>{{ bookToDelete.bookName }}</strong>. This action cannot be undone.</p>
+      <p>Vous êtes sur le point de supprimer définitivement <strong>{{ bookToDelete.bookName }}</strong>. Cette action est irréversible.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="bookToDelete=null">Cancel</button>
-      <button class="btn btn-danger" (click)="deleteBook(bookToDelete.bookId)">Delete</button>
+      <button class="btn btn-secondary" (click)="bookToDelete=null">Annuler</button>
+      <button class="btn btn-danger" (click)="deleteBook(bookToDelete.bookId)">Supprimer</button>
     </div>
   </div>
 </div>

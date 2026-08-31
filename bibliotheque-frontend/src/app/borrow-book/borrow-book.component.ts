@@ -12,12 +12,16 @@ import { UserAuthService } from '../_service/user-auth.service';
 })
 export class BorrowBookComponent implements OnInit {
 
-  books: Books[];
+  books: Books[] = [];
   borrow: Borrow = new Borrow();
   borrowingId: number | null = null;
   succes: string | null = null;
   erreur: string | null = null;
   userId = this.userAuthService.getUserId();
+
+  // Pagination
+  page = 1;
+  pageSize = 10;
 
   constructor(private booksService: BooksService, private userAuthService: UserAuthService, private borrowService: BorrowService) {}
 
@@ -26,6 +30,13 @@ export class BorrowBookComponent implements OnInit {
   private getBooks() {
     this.booksService.getBooksList().subscribe(data => { this.books = data; });
   }
+
+  get pagedBooks(): Books[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.books.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(p: number) { this.page = p; }
 
   borrowBook(bookId: number) {
     this.succes = null;
@@ -36,13 +47,20 @@ export class BorrowBookComponent implements OnInit {
     this.borrowService.borrowBook(this.borrow).subscribe({
       next: () => {
         this.borrowingId = null;
-        this.succes = 'Book borrowed successfully!';
+        this.succes = 'Livre emprunté avec succès !';
         this.getBooks();
+        this.autoDismiss();
       },
       error: (err) => {
         this.borrowingId = null;
-        this.erreur = err?.error?.message || 'Failed to borrow book.';
+        this.erreur = err?.error?.message || 'Échec de l\'emprunt du livre.';
+        this.autoDismiss();
       }
     });
+  }
+
+  // Auto-dismiss alerts after 5s
+  private autoDismiss() {
+    setTimeout(() => { this.succes = null; this.erreur = null; }, 5000);
   }
 }

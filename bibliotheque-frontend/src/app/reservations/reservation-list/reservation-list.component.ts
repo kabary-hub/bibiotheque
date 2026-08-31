@@ -19,8 +19,10 @@ import {
 export class ReservationListComponent {
 
     @Input() reservations: Reservation[] = [];
+    @Input() isAdmin = false;
 
     @Output() annulationDemandee = new EventEmitter<Reservation>();
+    @Output() suppressionDemandee = new EventEmitter<Reservation>();
 
     libelle(statut: StatutReservation): string {
         const trouve = STATUTS.find((s) => s.code === statut);
@@ -46,5 +48,9 @@ export class ReservationListComponent {
 
     demanderAnnulation(reservation: Reservation): void {
         this.annulationDemandee.emit(reservation);
+    }
+
+    demanderSuppression(reservation: Reservation): void {
+        this.suppressionDemandee.emit(reservation);
     }
 }

@@ -77,12 +77,14 @@ export class MyBooksComponent implements OnInit {
     this.borrowService.returnBook(borrowId).subscribe({
       next: () => {
         this.returningId = null;
-        this.succes = 'Book returned successfully!';
+        this.succes = 'Livre retourné avec succès !';
         this.chargerEmprunts();
+        this.autoDismiss();
       },
       error: (err) => {
         this.returningId = null;
-        this.erreur = err?.error?.message || 'Failed to return book.';
+        this.erreur = err?.error?.message || 'Échec du retour du livre.';
+        this.autoDismiss();
       }
     });
   }
@@ -123,8 +125,9 @@ export class MyBooksComponent implements OnInit {
         this.reservationEnCours = false;
         this.livreIdChoisi = null;
         this.jetonReinit++;
-        this.succes = `Reservation #${r.id} created for « ${r.livreTitre} ».`;
+        this.succes = `Réservation n°${r.id} créée pour « ${r.livreTitre} ».`;
         this.chargerReservations();
+        this.autoDismiss();
       },
       error: (err) => {
         this.reservationEnCours = false;
@@ -138,7 +141,8 @@ export class MyBooksComponent implements OnInit {
     this.erreur = null;
     this.reservationService.annuler(reservation.id).subscribe({
       next: (r) => {
-        this.succes = `Reservation #${r.id} cancelled.`;
+        this.succes = `Réservation n°${r.id} annulée.`;
+        this.autoDismiss();
         this.reservations = (this.reservations ?? []).map(x => x.id === r.id ? r : x);
       },
       error: (err) => {
@@ -160,5 +164,9 @@ export class MyBooksComponent implements OnInit {
 
   estAnnulable(statut: string): boolean {
     return statut === 'EN_ATTENTE' || statut === 'DISPONIBLE';
+  }
+
+  private autoDismiss() {
+    setTimeout(() => { this.succes = null; this.erreur = null; }, 5000);
   }
 }

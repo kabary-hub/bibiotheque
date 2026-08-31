@@ -1,55 +1,65 @@
 <div class="card">
   <div class="card-header">
     <div>
-      <h2 class="card-title">Users</h2>
-      <p class="card-subtitle">{{ users?.length || 0 }} registered account(s)</p>
+      <h2 class="card-title">Utilisateurs</h2>
+      <p class="card-subtitle">{{ users?.length || 0 }} compte(s) enregistré(s)</p>
     </div>
     <a routerLink="/register-user" class="btn btn-primary btn-sm">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add user
+      Ajouter un utilisateur
     </a>
-  </div>
-
-  <div *ngIf="!users" class="state">
-    <div class="spinner" aria-label="Loading..."></div>
-    <p class="state-text">Loading users...</p>
   </div>
 
   <div *ngIf="users && users.length === 0" class="state">
     <div class="state-icon" aria-hidden="true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     </div>
-    <p class="state-title">No users yet</p>
-    <a routerLink="/register-user" class="btn btn-primary btn-sm">Add user</a>
+    <p class="state-title">Aucun utilisateur</p>
+    <a routerLink="/register-user" class="btn btn-primary btn-sm">Ajouter un utilisateur</a>
   </div>
 
   <div *ngIf="users && users.length > 0" class="card-body--flush">
     <div class="table-wrap">
-      <table class="table" aria-label="User list">
+      <table class="table" aria-label="Liste des utilisateurs">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Username</th>
-            <th>Role</th>
+            <th>Nom</th>
+            <th>Nom d'utilisateur</th>
+            <th>Rôle</th>
             <th class="cell-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let user of users">
-            <td data-label="Name" class="cell-strong">{{ user.name }}</td>
-            <td data-label="Username" class="cell-muted">{{ user.username }}</td>
-            <td data-label="Role">
+          <tr *ngFor="let user of pagedUsers">
+            <td data-label="Nom" class="cell-strong">{{ user.name }}</td>
+            <td data-label="Nom d'utilisateur" class="cell-muted">{{ user.username }}</td>
+            <td data-label="Rôle">
               <span class="badge" [ngClass]="getRoleBadge(user)">{{ getRoleLabel(user) }}</span>
             </td>
             <td class="cell-actions">
-              <div class="btn-group">
-                <button *ngIf="isUser(user)" class="btn btn-secondary btn-sm" (click)="userDetails(user.userId)">History</button>
-                <button class="btn btn-secondary btn-sm" (click)="updateUser(user.userId)">Edit</button>
-              </div>
+              <app-action-menu [items]="getMenuItems(user)" (action)="onMenuAction(user, $event)"></app-action-menu>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+    <app-pagination [totalItems]="users.length" [pageSize]="pageSize" [currentPage]="page" (pageChange)="onPageChange($event)"></app-pagination>
+  </div>
+</div>
+
+<!-- Confirmation modale suppression -->
+<div class="overlay" *ngIf="userToDelete" (click)="userToDelete=null" aria-hidden="true"></div>
+<div class="modal" *ngIf="userToDelete" role="dialog" aria-modal="true" aria-labelledby="del-user-title">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 class="modal-title" id="del-user-title">Supprimer l'utilisateur ?</h3>
+    </div>
+    <div class="modal-body">
+      <p>Vous êtes sur le point de supprimer définitivement <strong>{{ userToDelete.name }}</strong>. Cette action est irréversible.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="userToDelete=null">Annuler</button>
+      <button class="btn btn-danger" (click)="deleteUser(userToDelete.userId)">Supprimer</button>
     </div>
   </div>
 </div>

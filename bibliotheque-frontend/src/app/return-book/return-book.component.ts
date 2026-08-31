@@ -12,8 +12,12 @@ import { UserAuthService } from '../_service/user-auth.service';
 })
 export class ReturnBookComponent implements OnInit {
 
-  books: Books[];
-  borrow: Borrow[];
+  books: Books[] = [];
+  borrow: Borrow[] = [];
+
+  // Pagination
+  page = 1;
+  pageSize = 10;
 
   constructor(
     private borrowService: BorrowService,
@@ -39,6 +43,13 @@ export class ReturnBookComponent implements OnInit {
       this.borrow = data;
     });
   }
+
+  get pagedBorrows(): Borrow[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.borrow.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(p: number) { this.page = p; }
 
   public returnBook(borrowId: number) {
     this.borrowService.returnBook(borrowId).subscribe({
