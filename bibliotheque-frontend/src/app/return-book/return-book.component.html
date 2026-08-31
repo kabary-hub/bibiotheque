@@ -27,6 +27,7 @@
         <thead>
           <tr>
             <th>Book ID</th>
+            <th>Book Name</th>
             <th>Issue Date</th>
             <th>Due Date</th>
             <th>Return Date</th>
@@ -36,6 +37,7 @@
         <tbody>
           <tr *ngFor="let b of borrow">
             <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
+            <td data-label="Book Name">{{ b.bookName }}</td>
             <td data-label="Issue Date">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
             <td data-label="Due Date">
               <span class="badge" [ngClass]="isOverdue(b) ? 'badge--danger' : 'badge--neutral badge--plain'">

@@ -150,6 +150,7 @@
           <thead>
             <tr>
               <th>Book ID</th>
+              <th>Book Name</th>
               <th>Borrowed on</th>
               <th>Due date</th>
               <th class="cell-actions">Action</th>
@@ -158,6 +159,7 @@
           <tbody>
             <tr *ngFor="let b of empruntsActifs">
               <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
+              <td data-label="Book Name">{{ b.bookName }}</td>
               <td data-label="Borrowed on">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
               <td data-label="Due date">
                 <span class="badge" [ngClass]="isOverdue(b) ? 'badge--danger' : 'badge--warning'">
@@ -192,6 +194,7 @@
           <thead>
             <tr>
               <th>Book ID</th>
+              <th>Book Name</th>
               <th>Borrowed on</th>
               <th>Returned on</th>
             </tr>
@@ -199,6 +202,7 @@
           <tbody>
             <tr *ngFor="let b of historiqueRendu">
               <td data-label="Book ID" class="cell-strong">{{ b.bookId }}</td>
+              <td data-label="Book Name">{{ b.bookName }}</td>
               <td data-label="Borrowed on">{{ b.issueDate | date:'dd/MM/yyyy' }}</td>
               <td data-label="Returned on">
                 <span class="badge badge--success">{{ b.returnDate | date:'dd/MM/yyyy' }}</span>

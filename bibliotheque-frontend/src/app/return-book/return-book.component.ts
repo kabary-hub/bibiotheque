@@ -40,11 +40,8 @@ export class ReturnBookComponent implements OnInit {
     });
   }
 
-  brw: Borrow = new Borrow();
-
   public returnBook(borrowId: number) {
-    this.brw.borrowId = borrowId;
-    this.borrowService.returnBook(this.brw).subscribe({
+    this.borrowService.returnBook(borrowId).subscribe({
       next: () => this.getBooksByUser(),
       error: err => console.error(err)
     });

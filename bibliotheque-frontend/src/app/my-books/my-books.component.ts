@@ -74,9 +74,7 @@ export class MyBooksComponent implements OnInit {
     this.succes = null;
     this.erreur = null;
     this.returningId = borrowId;
-    const brw = new Borrow();
-    brw.borrowId = borrowId;
-    this.borrowService.returnBook(brw).subscribe({
+    this.borrowService.returnBook(borrowId).subscribe({
       next: () => {
         this.returningId = null;
         this.succes = 'Book returned successfully!';
