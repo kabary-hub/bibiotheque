@@ -1,22 +1,50 @@
-<h2>Borrow history of {{ user.name }}</h2>
-<table class="table table-info table-striped">
-    <thead>
-        <tr>
-            <th> Book ID </th>
-            <th> Issue Date </th>
-            <th> Return Date </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let borrower of borrow">
-            <td> {{ borrower.bookId }} </td>
-            <td> {{ borrower.issueDate }} </td>
-            <div *ngIf="borrower.returnDate != null">
-                <td> {{ borrower.returnDate }} </td>
-            </div>
-            <div *ngIf="borrower.returnDate === null">
-                <td> Book not returned yet </td>
-            </div>
-        </tr>
-    </tbody>
-</table>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Historique des emprunts</h2>
+      <p *ngIf="user" class="card-subtitle">{{ user.name }}</p>
+    </div>
+    <a routerLink="/users" class="btn btn-secondary btn-sm">← Retour aux utilisateurs</a>
+  </div>
+
+  <div *ngIf="!borrow" class="state">
+    <div class="spinner" aria-label="Loading..."></div>
+    <p class="state-text">Chargement de l'historique...</p>
+  </div>
+
+  <div *ngIf="borrow && borrow.length === 0" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </div>
+    <p class="state-title">Aucun historique</p>
+    <p class="state-text">Cet utilisateur n'a emprunté aucun livre.</p>
+  </div>
+
+  <div *ngIf="borrow && borrow.length > 0" class="card-body--flush">
+    <div class="table-wrap">
+      <table class="table" aria-label="Borrow history">
+        <thead>
+          <tr>
+            <th>ID Livre</th>
+            <th>Date d'emprunt</th>
+            <th>Date de retour</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let borrower of borrow">
+            <td data-label="ID Livre" class="cell-strong">{{ borrower.bookId }}</td>
+            <td data-label="Date d'emprunt">{{ borrower.issueDate | date:'dd/MM/yyyy' }}</td>
+            <td data-label="Date de retour">
+              <span *ngIf="borrower.returnDate" class="badge badge--success">
+                {{ borrower.returnDate | date:'dd/MM/yyyy' }}
+              </span>
+              <span *ngIf="!borrower.returnDate" class="badge badge--warning">Non retourné</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

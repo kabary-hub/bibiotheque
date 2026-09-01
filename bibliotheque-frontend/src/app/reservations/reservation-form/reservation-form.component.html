@@ -1,0 +1,68 @@
+<div class="card-body" style="border-bottom: 1px solid var(--c-line)">
+
+  <h3 class="card-title" style="margin-bottom: var(--sp-4)">New reservation</h3>
+
+  <!-- Erreur de chargement des référentiels -->
+  <div *ngIf="erreurReferentiels" class="alert alert--warning" role="alert">
+    <div class="alert-body">
+      Unable to load books and members: {{ erreurReferentiels.message }}
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm"
+            (click)="reessayerReferentiels.emit()">
+      Retry
+    </button>
+  </div>
+
+  <form (ngSubmit)="envoyer()" #formulaire="ngForm">
+    <div class="form-grid">
+
+      <div class="field">
+        <label class="label" for="livre">
+          Book <span class="required" aria-hidden="true">*</span>
+        </label>
+        <select id="livre" name="livre" class="select"
+                [(ngModel)]="livreId" [disabled]="envoiEnCours" required>
+          <option [ngValue]="null" disabled>— Choose a book —</option>
+          <option *ngFor="let l of livres" [ngValue]="l.bookId">
+            {{ libelleLivre(l) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="adherent">
+          Member <span class="required" aria-hidden="true">*</span>
+        </label>
+        <select id="adherent" name="adherent" class="select"
+                [(ngModel)]="adherentId" [disabled]="envoiEnCours" required>
+          <option [ngValue]="null" disabled>— Choose a member —</option>
+          <option *ngFor="let a of adherents" [ngValue]="a.userId">
+            {{ libelleAdherent(a) }}
+          </option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"
+              [disabled]="!valide || envoiEnCours">
+        <span *ngIf="envoiEnCours" class="spinner spinner--sm" aria-hidden="true"></span>
+        {{ envoiEnCours ? 'Creating...' : 'Reserve' }}
+      </button>
+      <span *ngIf="!valide" style="font-size:var(--fs-sm); color:var(--c-ink-muted)">
+        Choose a book and a member to enable the button.
+      </span>
+    </div>
+
+    <!-- Erreur serveur (refus métier) -->
+    <div *ngIf="erreur" class="alert alert--danger" style="margin-top:var(--sp-4); margin-bottom:0" role="alert">
+      <div class="alert-body">
+        <strong *ngIf="erreur.regle" class="rule-tag">{{ erreur.regle }}</strong>
+        {{ erreur.message }}
+      </div>
+    </div>
+
+  </form>
+
+</div>

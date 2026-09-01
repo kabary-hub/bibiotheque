@@ -1,25 +1,60 @@
-<h2>List of available books in the library</h2>
-<table class="table table-success table-striped">
-    <thead>
-        <tr>
-            <th> Book ID </th>
-            <th> Name </th>
-            <th> Author </th>
-            <th> Genre </th>
-            <th> Number of copies available </th>
-            <th> Actions </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let book of books">
-            <td> {{ book.bookId }} </td>
-            <td> {{ book.bookName }} </td>
-            <td> {{ book.bookAuthor }} </td>
-            <td> {{ book.bookGenre }} </td>
-            <td> {{ book.noOfCopies }} </td>
-            <td>
-                <button (click) = "borrowBook(book.bookId)" class="btn btn-success"> Borrow </button>
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Emprunter un livre</h2>
+      <p class="card-subtitle">Sélectionnez un livre à emprunter. Seuls les exemplaires disponibles peuvent être empruntés.</p>
+    </div>
+  </div>
+
+  <div *ngIf="succes" class="alert alert--success" style="margin: var(--sp-4) var(--sp-5) 0" role="status">
+    <div class="alert-body">{{ succes }}</div>
+    <button class="btn-close" (click)="succes=null" aria-label="Fermer">&#x2715;</button>
+  </div>
+  <div *ngIf="erreur" class="alert alert--danger" style="margin: var(--sp-4) var(--sp-5) 0" role="alert">
+    <div class="alert-body">{{ erreur }}</div>
+    <button class="btn-close" (click)="erreur=null" aria-label="Fermer">&#x2715;</button>
+  </div>
+
+  <div *ngIf="books && books.length === 0" class="state">
+    <div class="state-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <p class="state-title">Aucun livre disponible</p>
+    <p class="state-text">Tous les livres sont actuellement empruntés. Revenez plus tard.</p>
+  </div>
+
+  <div *ngIf="books && books.length > 0" class="card-body--flush">
+    <div class="table-wrap">
+      <table class="table" aria-label="Livres disponibles">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Auteur</th>
+            <th>Genre</th>
+            <th class="cell-numeric">Exemplaires</th>
+            <th class="cell-actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let book of pagedBooks">
+            <td data-label="Titre" class="cell-strong">{{ book.bookName }}</td>
+            <td data-label="Auteur">{{ book.bookAuthor }}</td>
+            <td data-label="Genre"><span class="badge badge--neutral badge--plain">{{ book.bookGenre }}</span></td>
+            <td data-label="Exemplaires" class="cell-numeric">
+              <span class="badge" [ngClass]="book.noOfCopies > 0 ? 'badge--success' : 'badge--danger'">{{ book.noOfCopies }}</span>
             </td>
-        </tr>
-    </tbody>
-</table>
+            <td class="cell-actions">
+              <button class="btn btn-borrow btn-sm"
+                      [disabled]="book.noOfCopies === 0 || borrowingId === book.bookId"
+                      (click)="borrowBook(book.bookId)">
+                <span *ngIf="borrowingId === book.bookId" class="spinner spinner--sm" aria-hidden="true"></span>
+                {{ borrowingId === book.bookId ? 'Emprunt...' : 'Emprunter' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <app-pagination [totalItems]="books.length" [pageSize]="pageSize" [currentPage]="page" (pageChange)="onPageChange($event)"></app-pagination>
+  </div>
+</div>

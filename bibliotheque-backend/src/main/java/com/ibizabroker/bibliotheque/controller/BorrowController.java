@@ -1,184 +1,103 @@
 package com.ibizabroker.bibliotheque.controller;
 
-import com.ibizabroker.bibliotheque.dao.BooksRepository;
-import com.ibizabroker.bibliotheque.dao.BorrowRepository;
-import com.ibizabroker.bibliotheque.dao.UsersRepository;
-import com.ibizabroker.bibliotheque.entity.Books;
-import com.ibizabroker.bibliotheque.entity.Borrow;
-import com.ibizabroker.bibliotheque.entity.Users;
+import com.ibizabroker.bibliotheque.dto.BorrowRequestDto;
+import com.ibizabroker.bibliotheque.dto.BorrowResponseDto;
+import com.ibizabroker.bibliotheque.exceptions.ApiError;
+import com.ibizabroker.bibliotheque.service.BorrowService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Calendar;
-import java.util.Date;
+import javax.validation.Valid;
 import java.util.List;
 
-@Repository
+/**
+ * Emprunts et restitutions.
+ *
+ * L'annotation @Repository qui decorait cette classe a ete retiree : elle
+ * declare un composant d'acces aux donnees, ce qu'un controleur n'est pas. Elle
+ * activait au passage la traduction des exceptions de persistance sur une
+ * couche qui n'en leve aucune.
+ */
+@CrossOrigin("http://localhost:4200")
 @RestController
 @RequestMapping("/borrow")
+@Tag(name = "Emprunts", description = "Pret et restitution des exemplaires")
 public class BorrowController {
 
     @Autowired
-    private BorrowRepository borrowRepository;
+    private BorrowService borrowService;
 
-    @Autowired
-    private UsersRepository usersRepository;
-
-    @Autowired
-    private BooksRepository booksRepository;
-
+    @Operation(summary = "Emprunter un exemplaire",
+            description = "Retire un exemplaire du rayon et pose une echeance a 7 jours.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Emprunt enregistre"),
+            @ApiResponse(responseCode = "400", description = "bookId ou userId absent",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Livre ou adherent inconnu",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Plus aucun exemplaire disponible",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
     @PostMapping
-    public String borrowBook(@RequestBody Borrow borrow) {
-        Users user = usersRepository.findById(borrow.getUserId()).get();
-        Books book = booksRepository.findById(borrow.getBookId()).get();
-
-        if (book.getNoOfCopies() < 1) {
-            return "The book \"" + book.getBookName() + "\" is out of stock!";
-        }
-
-        book.borrowBook();
-        booksRepository.save(book);
-
-        Date currentDate = new Date();
-        Date overdueDate = new Date();
-        Calendar c = Calendar.getInstance();
-        c.setTime(overdueDate);
-        c.add(Calendar.DATE, 7);
-        overdueDate = c.getTime();
-        borrow.setIssueDate(currentDate);
-        borrow.setDueDate(overdueDate);
-        borrowRepository.save(borrow);
-        return user.getName() + " has borrowed one copy of \"" + book.getBookName() + "\"!";
+    public ResponseEntity<BorrowResponseDto> emprunter(
+            @Valid @RequestBody BorrowRequestDto demande) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(borrowService.emprunter(demande));
     }
 
+    @Operation(summary = "Lister tous les emprunts")
+    @ApiResponse(responseCode = "200", description = "Liste des emprunts")
     @GetMapping
-    public List<Borrow> getAllBorrow() {
-        return borrowRepository.findAll();
+    public List<BorrowResponseDto> lister() {
+        return borrowService.lister();
     }
 
-    @PutMapping
-    public Borrow returnBook(@RequestBody Borrow borrow) {
-        Borrow borrowBook = borrowRepository.findById(borrow.getBorrowId()).get();
-        Books book = booksRepository.findById(borrowBook.getBookId()).get();
-
-        book.returnBook();
-        booksRepository.save(book);
-
-        Date currentDate = new Date();
-        borrowBook.setReturnDate(currentDate);
-        return borrowRepository.save(borrowBook);
+    @Operation(summary = "Restituer un exemplaire",
+            description = "Remet l'exemplaire en rayon. Un emprunt deja rendu est refuse.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Restitution enregistree"),
+            @ApiResponse(responseCode = "404", description = "Emprunt inconnu",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Emprunt deja restitue",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @PutMapping("/{borrowId}/restituer")
+    public BorrowResponseDto restituer(
+            @Parameter(description = "Identifiant de l'emprunt", example = "5")
+            @PathVariable Integer borrowId) {
+        return borrowService.restituer(borrowId);
     }
 
-    @GetMapping("user/{id}")
-    public List<Borrow> booksBorrowedByUser(@PathVariable Integer id) {
-        return borrowRepository.findByUserId(id);
+    @Operation(summary = "Emprunts d'un adherent")
+    @ApiResponse(responseCode = "200", description = "Liste des emprunts de l'adherent")
+    @GetMapping("/user/{id}")
+    public List<BorrowResponseDto> parAdherent(
+            @Parameter(description = "Identifiant de l'adherent", example = "303")
+            @PathVariable Integer id) {
+        return borrowService.listerParAdherent(id);
     }
 
-    @GetMapping("book/{id}")
-    public List<Borrow> bookBorrowHistory(@PathVariable Integer id) {
-        return borrowRepository.findByBookId(id);
+    @Operation(summary = "Historique d'un livre")
+    @ApiResponse(responseCode = "200", description = "Emprunts successifs du livre")
+    @GetMapping("/book/{id}")
+    public List<BorrowResponseDto> parLivre(
+            @Parameter(description = "Identifiant du livre", example = "202")
+            @PathVariable Integer id) {
+        return borrowService.listerParLivre(id);
     }
-
-
-//    @Autowired
-//    private EntityManager entityManager;
-//
-//    @PostMapping
-//    public Borrow borrowBook(@RequestBody Borrow borrow) {
-//        borrowRepository.save(borrow);
-//        Books book = booksRepository.findById(borrow.getBOOKID()).orElseThrow(() -> new NotFoundException("Book not found."));
-//        if(book.getNoOfCopies()-1 < 0) {
-//            throw new IllegalStateException("There are no available books.");
-//        }
-//        book.borrowBook();
-//        booksRepository.save(book);
-//
-//        return borrow;
-//    }
-//
-//    @GetMapping
-//    public List<Borrow> getAllBorrow() {
-//        return borrowRepository.findAll();
-//    }
-//
-//    @PutMapping
-//    public Borrow returnBook(@RequestBody Borrow borrow) {
-//        borrowRepository.save(borrow);
-//        Books book = booksRepository.findById(borrow.getBOOKID()).orElseThrow(() -> new NotFoundException("Book not found."));
-//        book.returnBook();
-//        booksRepository.save(book);
-//
-//        Date currentDate = new Date(new java.util.Date().getTime());
-//        borrow.setReturnDate(currentDate);
-//        return borrow;
-//    }
-//
-//    @GetMapping("user/{id}")
-//    public List<Books> booksBorrowedByUser(@PathVariable Integer id) {
-//        Query q = entityManager.createNativeQuery("SELECT * FROM BOOKS AS B, BORROW AS L WHERE B.book_id = L.BOOKID AND L.USERID = " + id);
-//        List<Books> borrowedBooks = q.getResultList();
-//        return borrowedBooks;
-//    }
-//
-//    @GetMapping("book/{id}")
-//    public List<Users> bookBorrowHistory(@PathVariable Integer id) {
-//        Query q = entityManager.createNativeQuery("SELECT * FROM USERS AS U, BORROW AS L WHERE U.user_id = L.USERID AND L.BOOKID = " + id);
-//        List<Users> usersList = q.getResultList();
-//        return usersList;
-//    }
-
-//    @PostMapping
-//    public Borrow borrowBook(@RequestBody Borrow borrow) {
-//        borrow(borrow.getBorrowId(), borrow.getUser().getUserId(), borrow.getBook().getBookId());
-//        return borrow;
-//    }
-//
-//    @GetMapping
-//    public List<Borrow> getAllBorrow() {
-//        return borrowRepository.findAll();
-//    }
-//
-//    @PutMapping
-//    public Borrow returnBook(@RequestBody Borrow borrow) {
-//        Books book = booksRepository.findById(borrow.getBook().getBookId()).orElseThrow(() -> new NotFoundException("Book not found."));
-//        book.returnBook();
-//        booksRepository.save(book);
-//
-//        Date currentDate = new Date(new java.util.Date().getTime());
-//        borrow.setReturnDate(currentDate);
-//        return borrowRepository.save(borrow);
-//    }
-//
-//    @GetMapping("user/{id}")
-//    public List<Books> booksBorrowedByUser(@PathVariable Integer id) {
-//        Users user = usersRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found."));
-//        return user.getBooks();
-//    }
-//
-//    @GetMapping("book/{id}")
-//    public List<Users> bookBorrowHistory(@PathVariable Integer id) {
-//        Books book = booksRepository.findById(id).orElseThrow(() -> new NotFoundException("Book not found."));
-//        return book.getUsers();
-//    }
-//
-//    public void borrow(Integer borrowId, Integer userId, Integer bookId) {
-//        Users user = usersRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found."));
-//        if(user.getBooks().stream().anyMatch(book -> Objects.equals(book.getBookId(), bookId))) {
-//            throw new IllegalStateException("User already borrowed the book");
-//        }
-//
-//        Books book = booksRepository.findById(bookId).orElseThrow(() -> new NotFoundException("Book not found."));
-//        if(book.getNoOfCopies()-1 < 0) {
-//            throw new IllegalStateException("There are no available books.");
-//        }
-//
-//        book.getUsers().add(user);
-//        book.setNoOfCopies(book.getNoOfCopies()-1);
-//        booksRepository.save(book);
-//
-//        user.getBooks().add(book);
-//        usersRepository.save(user);
-//    }
-
 }

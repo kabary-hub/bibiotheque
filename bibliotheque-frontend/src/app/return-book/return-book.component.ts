@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { Observable } from 'rxjs';
 import { Books } from '../_model/books';
 import { Borrow } from '../_model/borrow';
 import { BooksService } from '../_service/books.service';
@@ -13,8 +12,12 @@ import { UserAuthService } from '../_service/user-auth.service';
 })
 export class ReturnBookComponent implements OnInit {
 
-  books: Books[];
-  borrow: Borrow[];
+  books: Books[] = [];
+  borrow: Borrow[] = [];
+
+  // Pagination
+  page = 1;
+  pageSize = 10;
 
   constructor(
     private borrowService: BorrowService,
@@ -30,25 +33,33 @@ export class ReturnBookComponent implements OnInit {
   }
 
   private getBooks() {
-    this.booksService.getBooksList().subscribe(data =>{
+    this.booksService.getBooksList().subscribe(data => {
       this.books = data;
     });
   }
 
-  
   private getBooksByUser() {
     this.borrowService.getBooksBorrowedByUser(this.userId).subscribe(data => {
       this.borrow = data;
-    })
+    });
   }
 
-  brw: Borrow = new Borrow();
+  get pagedBorrows(): Borrow[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.borrow.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(p: number) { this.page = p; }
+
   public returnBook(borrowId: number) {
-    this.brw.borrowId = borrowId;
-    this.borrowService.returnBook(this.brw).subscribe(data => {
-      console.log(data);
-    },
-    error => console.log(error));
+    this.borrowService.returnBook(borrowId).subscribe({
+      next: () => this.getBooksByUser(),
+      error: err => console.error(err)
+    });
   }
 
+  public isOverdue(b: Borrow): boolean {
+    if (b.returnDate) { return false; }
+    return b.dueDate ? new Date(b.dueDate) < new Date() : false;
+  }
 }

@@ -16,12 +16,15 @@ export class HeaderComponent implements OnInit {
     public userService: UsersService,
   ) { }
 
-  name = this.userAuthService.getName();
-  ngOnInit(): void {
+  menuOpen = false;
+
+  get name(): string {
+    return this.userAuthService.getName();
   }
 
+  ngOnInit(): void {}
+
   public isLoggedIn() {
-    console.log(this.name);
     return this.userAuthService.isLoggedIn();
   }
 

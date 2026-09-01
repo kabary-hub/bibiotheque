@@ -1,0 +1,1061 @@
+{
+  "info": {
+    "_postman_id": "b1b1074e-5e52-4c2a-9f31-2f0a5d3c7a10",
+    "name": "Bibliotheque - Module Reservation (seance 2)",
+    "description": "Collection complete et automatisee du module Reservation.\n\n=== ORDRE D'EXECUTION ===\n  1 Authentification   : identifiants deja remplis, les jetons se rangent seuls\n  2 Le jeu de donnees  : afficher L1-L5, A1-A3 et les emprunts\n  3 Parcours nominal   : creer, consulter, lister, filtrer, annuler\n  4 Regles de gestion  : RG-01 a RG-06, chacune declenchee volontairement\n  5 Validation et 404  : champs manquants, ressources absentes\n  6 Securite           : 401 sans jeton, 403 sans le role\n  7 Nettoyage          : remise a zero\n\nS'execute d'un bloc avec le Collection Runner, de haut en bas.\nRien a saisir : identifiants, identifiants de livres et d'adherents sont deja\ndans les variables de collection.\n\n=== PREREQUIS ===\nLe backend de la branche feature/reservation-tasse-ulruch doit tourner sur le\nport 8080. L'image Docker de la seance 1 ne contient pas /api/reservations :\nelle repondrait 401 a toute la collection. La requete 1.4 le detecte et le dit.\n\n=== DONNEES ATTENDUES EN BASE (fixtures-reservation.sql) ===\n  L1 (201) : livre DISPONIBLE, 3 exemplaires, aucun emprunt en cours\n  L2 (202), L3 (203), L4 (204), L5 (205) : empruntes par A3 et non rendus\n  A1 (301) a1_reservataire : reservataire principal\n  A2 (302) a2_quota       : celui qui saturera son quota\n  A3 (303) a3_emprunteur  : l'emprunteur, il detient L2 a L5\n  Mot de passe des trois adherents : admin123",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "L1", "value": "201" },
+    { "key": "L2", "value": "202" },
+    { "key": "L3", "value": "203" },
+    { "key": "L4", "value": "204" },
+    { "key": "L5", "value": "205" },
+    { "key": "A1", "value": "301" },
+    { "key": "A2", "value": "302" },
+    { "key": "A3", "value": "303" },
+    { "key": "token", "value": "" },
+    { "key": "tokenA1", "value": "" },
+    { "key": "reservationA1", "value": "" },
+    { "key": "reservationA2", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 - Authentification",
+      "item": [
+        {
+          "name": "1.1 POST /authenticate - admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.jwtToken);",
+                  "pm.test('Un jeton JWT est renvoye et range dans {{token}}', function () {",
+                  "    pm.expect(json.jwtToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('Le compte porte le role Admin', function () {",
+                  "    pm.expect(JSON.stringify(json.user.role)).to.include('Admin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/authenticate", "host": ["{{baseUrl}}"], "path": ["authenticate"] },
+            "description": "Premiere requete de la collection. Les identifiants sont deja saisis. Le jeton part dans {{token}} : toutes les routes /admin/** l'utilisent ensuite sans intervention."
+          }
+        },
+        {
+          "name": "1.2 POST /authenticate - A1, simple adherent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('tokenA1', json.jwtToken);",
+                  "pm.test('Le compte porte le role User, pas Admin', function () {",
+                  "    const roles = JSON.stringify(json.user.role);",
+                  "    pm.expect(roles).to.include('User');",
+                  "    pm.expect(roles).to.not.include('Admin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"a1_reservataire\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/authenticate", "host": ["{{baseUrl}}"], "path": ["authenticate"] },
+            "description": "Range le jeton dans {{tokenA1}}. Le dossier 6 s'en sert pour montrer la difference entre etre authentifie et avoir le role."
+          }
+        },
+        {
+          "name": "1.3 POST /authenticate - mot de passe errone -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Aucun jeton n est renvoye', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('jwtToken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"mauvais_mot_de_passe\"\n}" },
+            "url": { "raw": "{{baseUrl}}/authenticate", "host": ["{{baseUrl}}"], "path": ["authenticate"] },
+            "description": "Le mot de passe est compare par BCrypt : un mot de passe errone ne passe pas."
+          }
+        },
+        {
+          "name": "1.4 Remise a zero des reservations de A1 et A2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Diagnostic avant tout : un 401 ou un 404 ici signifie que le backend",
+                  "// lance n'est pas celui de la seance 2. L'image Docker de la seance 1",
+                  "// ne contient pas /api/reservations et rejette tout le reste.",
+                  "pm.test('Le module Reservation est bien deploye (sinon : mauvais backend)', function () {",
+                  "    if (pm.response.code === 401 || pm.response.code === 404) {",
+                  "        throw new Error('Le backend qui repond sur ' + pm.collectionVariables.get('baseUrl') +",
+                  "            ' ne contient pas /api/reservations (code ' + pm.response.code + '). ' +",
+                  "            'Lancez le jar de la branche feature/reservation-tasse-ulruch, ' +",
+                  "            'pas le conteneur bibliotheque-backend de la seance 1.');",
+                  "    }",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Rend la collection rejouable. Sans cette purge, la deuxieme execution",
+                  "// echouerait des RG-02 : A1 aurait deja une reservation active sur L2,",
+                  "// heritee du tour precedent.",
+                  "if (pm.response.code === 200) {",
+                  "    const base = pm.collectionVariables.get('baseUrl');",
+                  "    [pm.collectionVariables.get('A1'), pm.collectionVariables.get('A2')].forEach(function (id) {",
+                  "        pm.sendRequest(base + '/api/reservations?adherentId=' + id, function (err, res) {",
+                  "            if (err || !res) { return; }",
+                  "            res.json().forEach(function (r) {",
+                  "                pm.sendRequest({ url: base + '/api/reservations/' + r.id, method: 'DELETE' }, function () {});",
+                  "            });",
+                  "        });",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Deux roles : verifier que le bon backend repond, et purger les reservations de A1 et A2 pour que la collection reparte toujours du meme etat."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Afficher le jeu de donnees",
+      "item": [
+        {
+          "name": "2.1 GET /admin/books - les cinq livres",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const livres = pm.response.json();",
+                  "const trouver = function (id) { return livres.find(function (l) { return l.bookId === id; }); };",
+                  "",
+                  "pm.test('L1 est DISPONIBLE', function () {",
+                  "    pm.expect(trouver(201).noOfCopies).to.be.above(0);",
+                  "});",
+                  "[202, 203, 204, 205].forEach(function (id) {",
+                  "    pm.test('Le livre ' + id + ' est indisponible', function () {",
+                  "        pm.expect(trouver(id).noOfCopies).to.eql(0);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/books", "host": ["{{baseUrl}}"], "path": ["admin", "books"] },
+            "description": "noOfCopies est la seule chose que regarde RG-01 : > 0 vaut disponible, 0 vaut reservable. Le jeton vient de 1.1."
+          }
+        },
+        {
+          "name": "2.2 GET /admin/books/{{L1}} - le livre disponible",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('C est bien L1', function () {",
+                  "    pm.expect(pm.response.json().bookName).to.include('L1');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/books/{{L1}}", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{L1}}"] },
+            "description": "Route annotee @PreAuthorize(\"hasRole('Admin')\") : elle exige le jeton admin, pas celui d'un adherent."
+          }
+        },
+        {
+          "name": "2.3 GET /admin/users - les trois adherents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const users = pm.response.json();",
+                  "[301, 302, 303].forEach(function (id) {",
+                  "    pm.test('L adherent ' + id + ' existe', function () {",
+                  "        pm.expect(users.some(function (u) { return u.userId === id; })).to.be.true;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] },
+            "description": "A1, A2 et A3 doivent apparaitre, avec le role User."
+          }
+        },
+        {
+          "name": "2.4 GET /borrow - les emprunts en cours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const enCours = pm.response.json().filter(function (e) { return e.returnDate === null; });",
+                  "pm.test('Au moins quatre emprunts non rendus', function () {",
+                  "    pm.expect(enCours.length).to.be.at.least(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/borrow", "host": ["{{baseUrl}}"], "path": ["borrow"] },
+            "description": "returnDate a null signifie « emprunte et non rendu ». C'est ce qui justifie que L2 a L5 soient a zero exemplaire."
+          }
+        },
+        {
+          "name": "2.5 GET /borrow/user/{{A3}} - A3 detient L2 a L5",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const emprunts = pm.response.json();",
+                  "pm.test('A3 detient quatre livres', function () {",
+                  "    pm.expect(emprunts.length).to.eql(4);",
+                  "});",
+                  "pm.test('Ce sont bien L2, L3, L4 et L5', function () {",
+                  "    const ids = emprunts.map(function (e) { return e.bookId; }).sort();",
+                  "    pm.expect(ids).to.eql([202, 203, 204, 205]);",
+                  "});",
+                  "pm.test('Aucun n est rendu', function () {",
+                  "    emprunts.forEach(function (e) { pm.expect(e.returnDate).to.be.null; });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/borrow/user/{{A3}}", "host": ["{{baseUrl}}"], "path": ["borrow", "user", "{{A3}}"] },
+            "description": "A3 est l'emprunteur du tableau : c'est lui qui rend L2 a L5 indisponibles, donc reservables."
+          }
+        },
+        {
+          "name": "2.6 GET /borrow/book/{{L2}} - historique de L2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/borrow/book/{{L2}}", "host": ["{{baseUrl}}"], "path": ["borrow", "book", "{{L2}}"] },
+            "description": "Qui a emprunte L2, et quand."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Parcours nominal",
+      "item": [
+        {
+          "name": "3.1 POST - A1 reserve L2 -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.collectionVariables.set('reservationA1', r.id);",
+                  "",
+                  "pm.test('Statut initial EN_ATTENTE', function () {",
+                  "    pm.expect(r.statut).to.eql('EN_ATTENTE');",
+                  "});",
+                  "pm.test('RG-04 : echeance exactement a sept jours', function () {",
+                  "    const debut = new Date(r.dateReservation);",
+                  "    const fin = new Date(r.dateExpiration);",
+                  "    pm.expect((fin - debut) / 86400000).to.eql(7);",
+                  "});",
+                  "pm.test('Le serveur a horodate lui-meme', function () {",
+                  "    pm.expect(r.dateReservation).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('La reponse est un DTO, pas l entite', function () {",
+                  "    pm.expect(r).to.have.all.keys('id', 'livreId', 'livreTitre', 'adherentId', 'adherentNom', 'dateReservation', 'dateExpiration', 'statut');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L2}},\n  \"adherentId\": {{A1}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Le client n'envoie que livreId et adherentId. Les deux dates et le statut viennent du serveur."
+          }
+        },
+        {
+          "name": "3.2 GET /api/reservations/{{reservationA1}} - consulter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('C est bien la reservation creee', function () {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.eql(Number(pm.collectionVariables.get('reservationA1')));",
+                  "    pm.expect(r.livreId).to.eql(202);",
+                  "    pm.expect(r.adherentId).to.eql(301);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}"] },
+            "description": "L'identifiant vient de 3.1, range automatiquement dans {{reservationA1}}."
+          }
+        },
+        {
+          "name": "3.3 GET /api/reservations - lister",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('La reservation de A1 figure dans la liste', function () {",
+                  "    const attendu = Number(pm.collectionVariables.get('reservationA1'));",
+                  "    pm.expect(pm.response.json().some(function (r) { return r.id === attendu; })).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] }
+          }
+        },
+        {
+          "name": "3.4 GET ?adherentId={{A1}} - filtrer par adherent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('A1 detient exactement une reservation', function () {",
+                  "    pm.expect(pm.response.json().length).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations?adherentId={{A1}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"],
+              "query": [{ "key": "adherentId", "value": "{{A1}}" }]
+            }
+          }
+        },
+        {
+          "name": "3.5 GET ?statut=EN_ATTENTE - filtrer par statut",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Toutes les lignes sont EN_ATTENTE', function () {",
+                  "    pm.response.json().forEach(function (r) { pm.expect(r.statut).to.eql('EN_ATTENTE'); });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations?statut=EN_ATTENTE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"],
+              "query": [{ "key": "statut", "value": "EN_ATTENTE" }]
+            }
+          }
+        },
+        {
+          "name": "3.6 PATCH annuler -> 200 ANNULEE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Le statut est passe a ANNULEE', function () {",
+                  "    pm.expect(pm.response.json().statut).to.eql('ANNULEE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}/annuler", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}", "annuler"] },
+            "description": "RG-05 : une reservation EN_ATTENTE peut etre annulee."
+          }
+        },
+        {
+          "name": "3.7 GET ?adherentId={{A1}}&statut=ANNULEE - verifier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Les deux filtres se combinent', function () {",
+                  "    const liste = pm.response.json();",
+                  "    pm.expect(liste.length).to.eql(1);",
+                  "    pm.expect(liste[0].statut).to.eql('ANNULEE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations?adherentId={{A1}}&statut=ANNULEE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"],
+              "query": [
+                { "key": "adherentId", "value": "{{A1}}" },
+                { "key": "statut", "value": "ANNULEE" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Regles de gestion",
+      "item": [
+        {
+          "name": "4.1 RG-01 - reserver L1, disponible -> 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('La regle enfreinte est nommee : RG-01', function () {",
+                  "    pm.expect(pm.response.json().regle).to.eql('RG-01');",
+                  "});",
+                  "pm.test('Le message explique, il ne dit pas « erreur serveur »', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('disponible');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L1}},\n  \"adherentId\": {{A1}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "L1 est en rayon : une reservation n'a pas lieu d'etre, il faut l'emprunter."
+          }
+        },
+        {
+          "name": "4.2 RG-03 (1/4) - A2 reserve L2 -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Deux adherents peuvent reserver le meme livre', function () {",
+                  "    pm.expect(pm.response.json().livreId).to.eql(202);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L2}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "RG-02 ne vaut que pour un adherent donne : A2 peut reserver L2 meme si A1 l'a fait."
+          }
+        },
+        {
+          "name": "4.3 RG-02 - A2 reserve L2 une seconde fois -> 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('La regle enfreinte est RG-02', function () {",
+                  "    pm.expect(pm.response.json().regle).to.eql('RG-02');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L2}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Une seule reservation active par couple adherent / livre."
+          }
+        },
+        {
+          "name": "4.4 RG-03 (2/4) - A2 reserve L3 -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('201 Created', function () { pm.response.to.have.status(201); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L3}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] }
+          }
+        },
+        {
+          "name": "4.5 RG-03 (3/4) - A2 reserve L4 -> 201, quota atteint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('reservationA2', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L4}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Troisieme reservation active de A2 : le plafond est atteint, pas depasse."
+          }
+        },
+        {
+          "name": "4.6 RG-03 (4/4) - A2 reserve L5, la quatrieme -> 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('La regle enfreinte est RG-03', function () {",
+                  "    pm.expect(pm.response.json().regle).to.eql('RG-03');",
+                  "});",
+                  "pm.test('Le message donne le compte et le plafond', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('maximum autorise est de 3');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L5}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "A2 sature son quota : trois reservations actives au maximum."
+          }
+        },
+        {
+          "name": "4.7 RG-05 - annuler la 3e reservation de A2 -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Statut ANNULEE', function () {",
+                  "    pm.expect(pm.response.json().statut).to.eql('ANNULEE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA2}}/annuler", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA2}}", "annuler"] }
+          }
+        },
+        {
+          "name": "4.8 RG-06 - annuler a nouveau -> 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('La reponse cite RG-05 et RG-06', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.regle).to.eql('RG-05');",
+                  "    pm.expect(json.message).to.include('RG-06');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA2}}/annuler", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA2}}", "annuler"] },
+            "description": "ANNULEE est un statut terminal : RG-06 interdit toute transition ulterieure."
+          }
+        },
+        {
+          "name": "4.9 RG-03 - apres annulation, A2 peut reserver L5 -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Une reservation ANNULEE ne consomme plus le quota', function () {",
+                  "    pm.expect(pm.response.json().statut).to.eql('EN_ATTENTE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L5}},\n  \"adherentId\": {{A2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Le meme appel qu'en 4.6, qui echouait. Il passe maintenant : c'est la preuve que « active » se limite bien a EN_ATTENTE et DISPONIBLE."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Validation et ressources absentes",
+      "item": [
+        {
+          "name": "5.1 POST sans livreId -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Le message nomme le champ manquant', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('livreId');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"adherentId\": {{A1}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] }
+          }
+        },
+        {
+          "name": "5.2 POST corps vide -> 400, les deux champs nommes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Les DEUX champs manquants sont nommes', function () {",
+                  "    const message = pm.response.json().message;",
+                  "    pm.expect(message).to.include('livreId');",
+                  "    pm.expect(message).to.include('adherentId');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "La validation ne s'arrete pas au premier champ fautif : elle les liste tous."
+          }
+        },
+        {
+          "name": "5.3 POST livre inconnu -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Ce n est pas un 409 : rien n est en conflit, la ressource manque', function () {",
+                  "    pm.expect(pm.response.json().regle).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": 999999,\n  \"adherentId\": {{A1}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] }
+          }
+        },
+        {
+          "name": "5.4 POST adherent inconnu -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Le message designe l adherent, pas le livre', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('adherent');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L2}},\n  \"adherentId\": 999999\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Le livre existe, l'adherent non : le 404 doit dire lequel des deux manque."
+          }
+        },
+        {
+          "name": "5.5 GET reservation inconnue -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/999999", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "999999"] }
+          }
+        },
+        {
+          "name": "5.6 PATCH annuler une reservation inconnue -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/999999/annuler", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "999999", "annuler"] },
+            "description": "404 et non 409 : on ne peut pas etre en conflit avec une ressource qui n'existe pas."
+          }
+        },
+        {
+          "name": "5.7 DELETE une reservation inconnue -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/999999", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "999999"] }
+          }
+        },
+        {
+          "name": "5.8 GET ?statut=PEUT_ETRE -> 400, pas 500",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Le message rappelle les valeurs acceptees', function () {",
+                  "    const message = pm.response.json().message;",
+                  "    pm.expect(message).to.include('PEUT_ETRE');",
+                  "    pm.expect(message).to.include('EN_ATTENTE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations?statut=PEUT_ETRE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"],
+              "query": [{ "key": "statut", "value": "PEUT_ETRE" }]
+            },
+            "description": "Une faute de frappe sur un parametre ne doit pas produire une erreur serveur."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - Securite",
+      "item": [
+        {
+          "name": "6.1 GET /admin/users SANS jeton -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] },
+            "description": "401 : la requete n'est pas authentifiee du tout."
+          }
+        },
+        {
+          "name": "6.2 GET /admin/users avec le jeton de A1 -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });",
+                  "pm.test('403 et non 401 : A1 est authentifie, mais pas Admin', function () {",
+                  "    pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA1}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] },
+            "description": "La double protection du projet : la chaine de filtres authentifie, @PreAuthorize verifie le role. Etre connecte ne suffit pas. Le jeton vient de 1.2."
+          }
+        },
+        {
+          "name": "6.3 GET /admin/books avec le jeton de A1 -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Cette route n exige que d etre authentifie', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenA1}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/books", "host": ["{{baseUrl}}"], "path": ["admin", "books"] },
+            "description": "Contraste avec 6.2 : getAllBooks n'est pas annotee @PreAuthorize, un simple adherent y accede."
+          }
+        },
+        {
+          "name": "6.4 GET /api/reservations sans jeton -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Le module Reservation est ouvert, comme /borrow/**. Les codes attendus par l'enonce sont 400, 404 et 409 : un 401 n'y figure pas."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 - Nettoyage",
+      "item": [
+        {
+          "name": "7.1 Supprimer la reservation de A1 -> 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });",
+                  "pm.test('Le corps est vide', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}"] },
+            "description": "Suppression definitive de la ligne, a distinguer de l'annulation qui conserve la trace."
+          }
+        },
+        {
+          "name": "7.2 Purger les reservations restantes de A2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "pm.response.json().forEach(function (r) {",
+                  "    pm.sendRequest({ url: base + '/api/reservations/' + r.id, method: 'DELETE' }, function () {});",
+                  "});",
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations?adherentId={{A2}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations"],
+              "query": [{ "key": "adherentId", "value": "{{A2}}" }]
+            },
+            "description": "Laisse la base dans l'etat ou la collection l'a trouvee, pour que le prochain tour reparte du meme point."
+          }
+        }
+      ]
+    }
+  ]
+}

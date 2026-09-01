@@ -1,0 +1,201 @@
+# =============================================================================
+#  Bibliotheque — pile complete
+# =============================================================================
+#  Demarrage :  docker compose up --build
+#
+#  Une fois les trois services demarres :
+#    - interface    http://localhost:4200
+#    - API          http://localhost:8080
+#    - base Postgres localhost:5432 (base « bibliotheque »)
+#
+#  La cle « version: » n'est pas declaree : elle est obsolete depuis
+#  Compose v2 et provoque un avertissement.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  #  Base de donnees
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: bibliotheque-db
+    restart: unless-stopped
+
+    environment:
+      # POSTGRES_DB demande a l'image de creer la base au tout premier
+      # demarrage. Sans lui, Hibernate trouverait un serveur joignable mais
+      # aucune base « bibliotheque » ou ecrire.
+      POSTGRES_DB: ${POSTGRES_DB:-bibliotheque}
+      POSTGRES_USER: ${POSTGRES_USER:-bibliotheque}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
+
+    ports:
+      # Publie pour pouvoir inspecter la base depuis l'hote (psql, DBeaver)
+      # sans passer par un shell dans le conteneur.
+      - "5432:5432"
+
+    volumes:
+      # C'est ce volume nomme qui fait survivre les donnees a un
+      # « docker compose down » suivi d'un « up ». Sans lui, la couche
+      # inscriptible du conteneur disparait avec le conteneur, et la base
+      # repart vide a chaque fois.
+      #
+      # Le nom a change en meme temps que le moteur : « pg-data » et non
+      # « db-data ». PostgreSQL refuse de demarrer sur un repertoire non vide
+      # qui ne porte pas son fichier PG_VERSION — reutiliser l'ancien volume
+      # MySQL echouerait. Il est laisse intact plutot qu'ecrase.
+      - pg-data:/var/lib/postgresql/data
+
+    healthcheck:
+      # « depends_on » seul n'attend que le DEMARRAGE du conteneur, pas la
+      # DISPONIBILITE du serveur : PostgreSQL initialise son cluster au premier
+      # lancement. Le backend demarrerait pendant ce temps, echouerait a se
+      # connecter, et Spring Boot s'arreterait.
+      #
+      # pg_isready interroge reellement le serveur. Le conteneur n'est declare
+      # « healthy » que lorsqu'il repond.
+      #
+      # $$ echappe le $ : sans cela, Compose tenterait de substituer la
+      # variable lui-meme au lieu de la laisser au shell du conteneur.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  API Spring Boot
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./bibliotheque-backend
+    container_name: bibliotheque-backend
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        # « service_healthy », et non « service_started » : c'est ce qui fait
+        # attendre la fin du healthcheck ci-dessus.
+        condition: service_healthy
+
+    environment:
+      # Surcharge de application.properties SANS le modifier.
+      #
+      # Spring Boot applique un ordre de priorite entre sources de
+      # configuration : les variables d'environnement priment sur le fichier
+      # .properties embarque dans le jar. La correspondance se fait par
+      # « relaxed binding » : spring.datasource.url devient
+      # SPRING_DATASOURCE_URL (majuscules, points remplaces par des
+      # soulignements).
+      #
+      # « db » est le nom du service : a l'interieur du reseau Docker, il est
+      # resolu en l'adresse IP du conteneur PostgreSQL. « localhost » y designerait
+      # le conteneur backend lui-meme, ou rien n'ecoute sur 5432.
+      #
+      # PostgreSQL n'a pas besoin des parametres que MySQL 8 exigeait
+      # (allowPublicKeyRetrieval, useSSL, serverTimezone) : son pilote negocie
+      # la connexion sans eux et travaille en UTC par defaut.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-bibliotheque}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-bibliotheque}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
+
+    ports:
+      # Ce mappage n'est pas un confort, il est INDISPENSABLE au
+      # fonctionnement de l'interface.
+      #
+      # Les trois services Angular appellent « http://localhost:8080 » en dur.
+      # Ce code s'execute dans le NAVIGATEUR de l'utilisateur, pas dans le
+      # conteneur frontend. « localhost » y designe donc la machine hote.
+      # Publier 8080 sur l'hote est ce qui fait aboutir ces appels.
+      #
+      # C'est aussi pourquoi remplacer l'adresse par « backend:8080 » ne
+      # marcherait pas : ce nom n'est resolvable que depuis l'interieur du
+      # reseau Docker, auquel le navigateur n'appartient pas.
+      - "8080:8080"
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  Interface Angular
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./bibliotheque-frontend
+    container_name: bibliotheque-frontend
+    restart: unless-stopped
+
+    depends_on:
+      # Simple ordre de demarrage. Pas de healthcheck ici : nginx sert des
+      # fichiers statiques et n'a besoin de rien pour repondre. Si l'API n'est
+      # pas encore prete, la page s'affiche et les appels echoueront jusqu'a
+      # ce qu'elle le soit.
+      - backend
+
+    ports:
+      # 4200 sur l'hote (le port attendu, celui de « ng serve ») vers 80 dans
+      # le conteneur (le port par defaut de nginx).
+      - "4200:80"
+
+    networks:
+      - bibliotheque-net
+
+  # ---------------------------------------------------------------------------
+  #  Initialisation des donnees
+  # ---------------------------------------------------------------------------
+  #  Sans ce service, un « docker compose up » sur une machine vierge donne une
+  #  application dans laquelle on ne peut pas entrer : la base est vide, aucun
+  #  compte n'existe, et POST /admin/users exige deja un jeton. Il fallait
+  #  inserer le premier administrateur en SQL a la main.
+  #
+  #  Ce conteneur s'execute une fois, insere le compte administrateur, un
+  #  compte lecteur, les cinq livres L1 a L5 et les trois adherents A1 a A3, puis
+#  s'arrete. Son etat final « Exited (0) »
+  #  est le comportement attendu, pas une panne.
+  # ---------------------------------------------------------------------------
+  seed:
+    # Reutilise l'image de PostgreSQL, deja presente : elle embarque le client
+    # « psql » dont le script a besoin. Aucune image supplementaire a
+    # telecharger.
+    image: postgres:16-alpine
+    container_name: bibliotheque-seed
+
+    # Le conteneur ne doit pas etre relance apres sa sortie : c'est une tache
+    # ponctuelle, pas un service.
+    restart: "no"
+
+    depends_on:
+      # « service_started » suffit : le script attend lui-meme que les tables
+      # existent. Les attendre ici serait impossible — Compose sait verifier
+      # qu'un service repond, pas qu'Hibernate a fini de creer son schema.
+      backend:
+        condition: service_started
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bibliotheque}
+      POSTGRES_USER: ${POSTGRES_USER:-bibliotheque}
+      # PGPASSWORD est lue directement par psql : elle evite d'avoir a passer
+      # le mot de passe en argument, ou de creer un fichier .pgpass.
+      PGPASSWORD: ${POSTGRES_PASSWORD:-bibliotheque}
+
+    volumes:
+      - ./docker/seed.sql:/seed/seed.sql:ro
+      - ./docker/seed-entrypoint.sh:/seed/entrypoint.sh:ro
+
+    # postgres:16-alpine n'embarque pas bash, seulement le shell d'Alpine.
+    entrypoint: ["/bin/sh", "/seed/entrypoint.sh"]
+
+    networks:
+      - bibliotheque-net
+
+
+networks:
+  bibliotheque-net:
+    driver: bridge
+
+volumes:
+  pg-data:

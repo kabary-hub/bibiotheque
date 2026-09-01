@@ -13,26 +13,23 @@ export class UpdateBookComponent implements OnInit {
 
   bookId: number;
   book: Books = new Books();
-  constructor(private booksService: BooksService,
-    private route: ActivatedRoute,
-    private router: Router) { }
+  envoiEnCours = false;
+  erreur: string | null = null;
+
+  constructor(private booksService: BooksService, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
     this.bookId = this.route.snapshot.params['bookId'];
-    this.booksService.getBookById(this.bookId).subscribe(data => {
-      this.book = data;
-    })
+    this.booksService.getBookById(this.bookId).subscribe(data => { this.book = data; });
   }
 
   onSubmit() {
-    this.booksService.updateBook(this.bookId, this.book).subscribe( data =>{
-        this.goToBooksList();
-    },
-    error => console.log(error));
-  }
-
-  goToBooksList() {
-    this.router.navigate(['/books']);
+    this.erreur = null;
+    this.envoiEnCours = true;
+    this.booksService.updateBook(this.bookId, this.book).subscribe({
+      next: () => { this.envoiEnCours = false; this.router.navigate(['/books']); },
+      error: (err) => { this.envoiEnCours = false; this.erreur = err?.error?.message || 'Une erreur est survenue.'; }
+    });
   }
 
 }

@@ -1,0 +1,834 @@
+/* ===========================================================================
+   Composants
+   ===========================================================================
+   Un seul jeu de classes pour toute l'application. Chaque ecran s'y branche au
+   lieu de redefinir son propre bouton : c'est ce qui fait qu'un reglage de
+   couleur ou de rayon se propage partout d'un coup.
+   =========================================================================== */
+
+
+/* ---------------------------------------------------------------------------
+   Boutons
+   --------------------------------------------------------------------------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-4);
+    height: 36px;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition: background-color var(--t-fast), border-color var(--t-fast),
+                box-shadow var(--t-fast), color var(--t-fast), transform var(--t-fast);
+}
+
+.btn:hover { text-decoration: none; }
+
+.btn:active:not(:disabled) {
+    /* Un deplacement d'un pixel suffit a rendre l'appui perceptible. */
+    transform: translateY(1px);
+}
+
+/* L'etat inactif se voit ET se comporte : pas de pointeur, pas de survol. */
+.btn:disabled,
+.btn[aria-disabled="true"] {
+    opacity: .55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background-color: var(--c-primary);
+    border-color: var(--c-primary);
+    color: var(--c-on-primary);
+    box-shadow: var(--shadow-xs);
+}
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--c-primary-600);
+    border-color: var(--c-primary-600);
+    box-shadow: var(--shadow-md);
+}
+.btn-primary:focus-visible {
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+.btn-secondary {
+    background-color: var(--c-canvas);
+    border-color: var(--c-line-strong);
+    color: var(--c-ink-2);
+    box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--c-canvas-soft);
+    border-color: var(--c-ink-subtle);
+    color: var(--c-ink);
+}
+.btn-secondary:focus-visible {
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+.btn-danger {
+    background-color: var(--c-danger);
+    border-color: var(--c-danger);
+    color: #fff;
+    box-shadow: var(--shadow-xs);
+}
+.btn-danger:hover:not(:disabled) {
+    background-color: var(--c-danger-fg);
+    border-color: var(--c-danger-fg);
+    box-shadow: var(--shadow-md);
+}
+.btn-danger:focus-visible {
+    box-shadow: var(--shadow-focus-danger);
+    outline: none;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--c-primary-600);
+}
+.btn-ghost:hover:not(:disabled) {
+    background-color: var(--c-primary-50);
+    color: var(--c-primary-700);
+}
+
+.btn-danger-ghost {
+    background-color: transparent;
+    border-color: var(--c-danger-line);
+    color: var(--c-danger-fg);
+}
+.btn-danger-ghost:hover:not(:disabled) {
+    background-color: var(--c-danger-bg);
+    border-color: var(--c-danger);
+}
+
+.btn-sm {
+    height: 30px;
+    padding: 0 var(--sp-3);
+    font-size: var(--fs-xs);
+}
+
+.btn-lg {
+    height: 44px;
+    padding: 0 var(--sp-5);
+    font-size: var(--fs-base);
+}
+
+.btn-borrow {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+    box-shadow: var(--shadow-xs);
+}
+.btn-borrow:hover:not(:disabled) {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+/* Groupe d'actions : sur mobile, les boutons passent en colonne pleine largeur
+   plutot que de se tasser cote a cote. */
+.btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+}
+
+@media (max-width: 480px) {
+    .btn-group--stack-mobile { flex-direction: column; }
+    .btn-group--stack-mobile .btn { width: 100%; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Champs de formulaire
+   --------------------------------------------------------------------------- */
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    min-width: 0;
+}
+
+.label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--c-ink);
+}
+
+.label .required {
+    color: var(--c-danger);
+    margin-left: 2px;
+}
+
+.input,
+.select,
+.textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: var(--sp-2) var(--sp-3);
+    font-family: inherit;
+    font-size: var(--fs-base);
+    color: var(--c-ink);
+    background-color: var(--c-canvas);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-xs);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    appearance: none;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+    color: var(--c-ink-muted);
+}
+
+/* Surcharge Bootstrap : form-control, form-select et form-label utilisent des
+   couleurs héritées qui peuvent être illisibles selon le fond. On les aligne
+   explicitement sur les tokens du design system. */
+.form-control,
+.form-select {
+    color: var(--c-ink) !important;
+    background-color: var(--c-canvas) !important;
+    border-color: var(--c-line-strong) !important;
+}
+
+.form-control::placeholder {
+    color: var(--c-ink-muted) !important;
+    opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+    color: var(--c-ink) !important;
+    border-color: var(--c-primary) !important;
+    box-shadow: var(--shadow-focus) !important;
+}
+
+.form-label {
+    color: var(--c-ink) !important;
+    font-weight: var(--fw-medium);
+}
+
+.input:hover:not(:disabled),
+.select:hover:not(:disabled),
+.textarea:hover:not(:disabled) {
+    border-color: var(--c-ink-subtle);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+    outline: none;
+    border-color: var(--c-primary);
+    box-shadow: var(--shadow-focus);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+    background-color: var(--c-canvas-sunk);
+    color: var(--c-ink-muted);
+    cursor: not-allowed;
+}
+
+/* Le chevron est dessine en CSS : pas de fichier image a charger, et il suit
+   la couleur du texte. */
+.select {
+    padding-right: var(--sp-6);
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2364748d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--sp-3) center;
+    cursor: pointer;
+}
+
+.textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.field-hint {
+    font-size: var(--fs-xs);
+    color: var(--c-ink-muted);
+}
+
+.field-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-1);
+    font-size: var(--fs-xs);
+    color: var(--c-danger-fg);
+    font-weight: var(--fw-medium);
+}
+
+.field--invalid .input,
+.field--invalid .select,
+.field--invalid .textarea {
+    border-color: var(--c-danger);
+}
+
+.field--invalid .input:focus,
+.field--invalid .select:focus,
+.field--invalid .textarea:focus {
+    box-shadow: var(--shadow-focus-danger);
+}
+
+/* Grille de formulaire : deux colonnes qui deviennent une sous 640px. */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0 var(--sp-4);
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-top: var(--sp-2);
+}
+
+
+/* ---------------------------------------------------------------------------
+   Cartes
+   --------------------------------------------------------------------------- */
+
+.card {
+    background-color: var(--c-canvas);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.card + .card {
+    margin-top: var(--sp-5);
+}
+
+.card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--c-line);
+    background-color: var(--c-canvas);
+}
+
+.card-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--c-ink);
+    letter-spacing: var(--ls-tight);
+}
+
+.card-subtitle {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--c-ink-muted);
+    font-weight: var(--fw-regular);
+}
+
+.card-body {
+    padding: var(--sp-5);
+}
+
+.card-body--flush {
+    padding: 0;
+}
+
+.card-footer {
+    padding: var(--sp-4) var(--sp-5);
+    border-top: 1px solid var(--c-line);
+    background-color: var(--c-canvas-soft);
+}
+
+
+/* ---------------------------------------------------------------------------
+   Pastilles
+   --------------------------------------------------------------------------- */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: 2px var(--sp-2);
+    border: 1px solid transparent;
+    border-radius: var(--r-full);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
+}
+
+.badge--plain::before { display: none; }
+
+.badge--success { background: var(--c-success-bg); color: var(--c-success-fg); border-color: var(--c-success-line); }
+.badge--warning { background: var(--c-warning-bg); color: var(--c-warning-fg); border-color: var(--c-warning-line); }
+.badge--danger  { background: var(--c-danger-bg);  color: var(--c-danger-fg);  border-color: var(--c-danger-line); }
+.badge--info    { background: var(--c-info-bg);    color: var(--c-info-fg);    border-color: var(--c-info-line); }
+.badge--neutral { background: var(--c-neutral-bg); color: var(--c-neutral-fg); border-color: var(--c-neutral-line); }
+.badge--primary { background: var(--c-primary-100); color: var(--c-primary-800); border-color: var(--c-primary-200); }
+
+
+/* ---------------------------------------------------------------------------
+   Tableaux
+   ---------------------------------------------------------------------------
+   Deux rendus pour une seule structure HTML. Au-dessus de 768px, un tableau.
+   En dessous, chaque ligne devient une carte et chaque cellule affiche son
+   intitule de colonne, lu depuis l'attribut data-label. Un tableau qui defile
+   horizontalement sur telephone est illisible ; celui-ci n'existe simplement
+   plus a cette taille.
+   --------------------------------------------------------------------------- */
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+}
+
+.table thead th {
+    padding: var(--sp-3) var(--sp-4);
+    text-align: left;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-wide);
+    color: var(--c-ink-muted);
+    background-color: var(--c-canvas-soft);
+    border-bottom: 1px solid var(--c-line);
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--c-line);
+    color: var(--c-ink-2);
+    vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.table tbody tr {
+    transition: background-color var(--t-fast);
+}
+
+.table tbody tr:hover {
+    background-color: var(--c-canvas-soft);
+}
+
+.table .cell-strong {
+    color: var(--c-ink);
+    font-weight: var(--fw-medium);
+}
+
+.table .cell-muted {
+    color: var(--c-ink-muted);
+}
+
+.table .cell-numeric {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.table .cell-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .table thead {
+        /* Masque accessible : les intitules restent lisibles par les lecteurs
+           d'ecran, et sont reaffiches par ::before sur chaque cellule. */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+        width: 100%;
+    }
+
+    .table tbody tr {
+        margin: 0 var(--sp-4) var(--sp-3);
+        border: 1px solid var(--c-line);
+        border-radius: var(--r-lg);
+        background-color: var(--c-canvas);
+        box-shadow: var(--shadow-xs);
+        overflow: hidden;
+    }
+
+    .table tbody tr:hover {
+        background-color: var(--c-canvas);
+    }
+
+    .table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sp-4);
+        padding: var(--sp-3) var(--sp-4);
+        text-align: right;
+    }
+
+    .table tbody td::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        text-align: left;
+        font-size: var(--fs-xs);
+        font-weight: var(--fw-semibold);
+        text-transform: uppercase;
+        letter-spacing: var(--ls-wide);
+        color: var(--c-ink-muted);
+    }
+
+    .table tbody td.cell-actions {
+        justify-content: flex-end;
+        background-color: var(--c-canvas-soft);
+        border-top: 1px solid var(--c-line);
+    }
+
+    .table tbody td.cell-actions::before {
+        display: none;
+    }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Messages
+   --------------------------------------------------------------------------- */
+
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid;
+    border-radius: var(--r-lg);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--sp-4);
+}
+
+.alert-body { flex: 1; min-width: 0; }
+
+.alert-title {
+    display: block;
+    font-weight: var(--fw-semibold);
+    margin-bottom: var(--sp-1);
+}
+
+.alert-actions {
+    margin-top: var(--sp-3);
+}
+
+.alert--success { background: var(--c-success-bg); color: var(--c-success-fg); border-color: var(--c-success-line); }
+.alert--warning { background: var(--c-warning-bg); color: var(--c-warning-fg); border-color: var(--c-warning-line); }
+.alert--danger  { background: var(--c-danger-bg);  color: var(--c-danger-fg);  border-color: var(--c-danger-line); }
+.alert--info    { background: var(--c-info-bg);    color: var(--c-info-fg);    border-color: var(--c-info-line); }
+
+.alert .btn-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: .6;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.alert .btn-close:hover { opacity: 1; }
+
+/* La reference de regle, mise en evidence devant le message du serveur. */
+.rule-tag {
+    display: inline-block;
+    padding: 1px var(--sp-2);
+    margin-right: var(--sp-2);
+    border-radius: var(--r-sm);
+    background-color: rgba(10, 37, 64, .08);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Etats : chargement, vide, erreur
+   ---------------------------------------------------------------------------
+   Meme hauteur minimale que le tableau qu'ils remplacent, pour que l'ecran ne
+   saute pas au moment ou les donnees arrivent.
+   --------------------------------------------------------------------------- */
+
+.state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    min-height: 220px;
+    padding: var(--sp-6) var(--sp-4);
+    text-align: center;
+}
+
+.state-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--c-canvas-sunk);
+    color: var(--c-ink-muted);
+}
+
+.state-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--c-ink);
+}
+
+.state-text {
+    margin: 0;
+    max-width: 46ch;
+    font-size: var(--fs-sm);
+    color: var(--c-ink-muted);
+}
+
+.state--error .state-icon {
+    background-color: var(--c-danger-bg);
+    color: var(--c-danger-fg);
+}
+
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--c-primary-100);
+    border-top-color: var(--c-primary);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+
+.spinner--sm {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, .35);
+    border-top-color: #fff;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2s; }
+}
+
+/* Squelette de chargement : preferable a un spinner quand la forme du contenu
+   est connue d'avance, parce qu'il annonce ce qui arrive. */
+.skeleton {
+    background: linear-gradient(90deg,
+        var(--c-canvas-sunk) 25%,
+        var(--c-canvas-soft) 37%,
+        var(--c-canvas-sunk) 63%);
+    background-size: 400% 100%;
+    border-radius: var(--r-sm);
+    animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Fenetre modale
+   --------------------------------------------------------------------------- */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    background-color: var(--c-overlay);
+    animation: fade var(--t-base) both;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-4);
+    pointer-events: none;
+}
+
+.modal-panel {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - var(--sp-7));
+    overflow-y: auto;
+    background-color: var(--c-canvas);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+    pointer-events: auto;
+    animation: rise var(--t-base) both;
+}
+
+.modal-header {
+    padding: var(--sp-5) var(--sp-5) 0;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: var(--fs-lg);
+    letter-spacing: var(--ls-tight);
+}
+
+.modal-body {
+    padding: var(--sp-4) var(--sp-5);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    padding: var(--sp-4) var(--sp-5);
+    border-top: 1px solid var(--c-line);
+    background-color: var(--c-canvas-soft);
+    border-radius: 0 0 var(--r-xl) var(--r-xl);
+}
+
+@media (max-width: 480px) {
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+    .modal-footer .btn { width: 100%; }
+}
+
+@keyframes fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes rise {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay, .modal-panel { animation: none; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Barre d'outils au-dessus d'une liste
+   --------------------------------------------------------------------------- */
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--c-line);
+    background-color: var(--c-canvas);
+}
+
+.toolbar .field {
+    margin-bottom: 0;
+    min-width: 190px;
+}
+
+.toolbar-spacer {
+    flex: 1 1 auto;
+}
+
+@media (max-width: 640px) {
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-spacer { display: none; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Divers
+   --------------------------------------------------------------------------- */
+
+.count-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 var(--sp-2);
+    border-radius: var(--r-full);
+    background-color: var(--c-neutral-bg);
+    color: var(--c-neutral-fg);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.divider {
+    height: 1px;
+    background-color: var(--c-line);
+    margin: var(--sp-4) 0;
+}

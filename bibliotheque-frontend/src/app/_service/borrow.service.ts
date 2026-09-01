@@ -20,8 +20,8 @@ export class BorrowService {
     return this.httpClient.post(`${this.baseURL}`, borrow);
   }
 
-  returnBook(borrow: Borrow): Observable<Object> {
-    return this.httpClient.put(`${this.baseURL}`, borrow);
+  returnBook(borrowId: number): Observable<Object> {
+    return this.httpClient.put(`${this.baseURL}/${borrowId}/restituer`, {});
   }
 
   getBooksBorrowedByUser(userId: number): Observable<Borrow[]> {
