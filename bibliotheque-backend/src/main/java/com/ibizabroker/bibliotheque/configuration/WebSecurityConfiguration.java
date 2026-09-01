@@ -41,6 +41,21 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         httpSecurity.cors();
         httpSecurity.csrf().disable()
                 .authorizeRequests().antMatchers("/authenticate", "/borrow/**", "/admin/books/").permitAll()
+                // Module Reservation : meme politique que /borrow/**, l'autre module
+                // tourne vers l'adherent. Les codes de retour attendus par l'enonce
+                // sont 400, 404 et 409 ; exiger un jeton ici ferait apparaitre un 401
+                // qui n'y figure pas. A restreindre le jour ou le projet distinguera
+                // reellement les roles sur les operations d'adherent.
+                .antMatchers("/api/reservations/**").permitAll()
+                // Documentation OpenAPI. Sans ces motifs, /swagger-ui.html repondrait
+                // 401 et la documentation exigee serait inaccessible.
+                .antMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**").permitAll()
                 .antMatchers(HttpHeaders.ALLOW).permitAll()
                 .anyRequest().authenticated()
                 .and()
