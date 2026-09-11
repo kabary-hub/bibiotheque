@@ -148,22 +148,6 @@ class ReservationSecurityTest {
     void adherentTenteDeleteRetourne403() throws Exception {
         Reservation reservation = creerReservation(livreIndisponible, adherent1);
 
-        mockMvc.perform(
-                        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("adherent1").roles("ADHERENT")
-                                .apply(new org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor() {
-                                    @Override
-                                    public org.springframework.security.core.userdetails.UserDetails postProcess(org.springframework.security.core.userdetails.UserDetails user) {
-                                        return user;
-                                    }
-                                }))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @DisplayName("RS-02 : ADHERENT tente DELETE -> 403")
-    void adherentTenteDeleteRetourne403v2() throws Exception {
-        Reservation reservation = creerReservation(livreIndisponible, adherent1);
-
         mockMvc.perform(delete(BASE + "/" + reservation.getReservationId())
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("adherent1").roles("ADHERENT")))
                 .andExpect(status().isForbidden());
