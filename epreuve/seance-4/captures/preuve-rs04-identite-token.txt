@@ -1,0 +1,23 @@
+============================================================
+  PREUVE RS-04 : Identite depuis le token JWT
+  Date : Fri, Sep 11, 2026 11:10:13 AM
+============================================================
+
+=== AVANT (faille) ===
+Le client envoyait : { "livreId": 203, "adherentId": 1 }
+→ Un attaquant pouvait creer une reservation au nom de n'importe qui.
+
+=== APRES (correction) ===
+Le client envoie : { "livreId": 203 }  (PAS de adherentId)
+L'identite est recuperee depuis le token JWT.
+
+--- POST /api/reservations { "livreId": 203 } ---
+--- Token : adherent1 (userId=3, role=ADHERENT) ---
+{"id":5,"livreId":203,"livreTitre":"L3 - Madame Bovary","adherentId":3,"adherentNom":"Adherent Alpha","dateReservation":"2026-09-11T10:10:13","dateExpiration":"2026-09-18T10:10:13","statut":"EN_ATTENTE"}
+HTTP Status: 201
+
+OBSERVATION :
+  - Le corps ne contenait QUE livreId (pas adherentId)
+  - Le serveur a attribue adherentId=3 (adherent1 depuis le token)
+  - Meme si un attaquant envoyait adherentId=1, le serveur ignorerait ce champ
+RS-04 VALIDEE

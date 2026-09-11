@@ -1,0 +1,19 @@
+============================================================
+  PREUVE RS-01 : Sans token, tout endpoint renvoie 401
+  Date : Fri, Sep 11, 2026 11:09:33 AM
+============================================================
+
+--- GET /api/reservations (sans token) ---
+{"timestamp":"2026-09-11T10:09:35.867+00:00","status":401,"error":"Unauthorized","message":"","path":"/api/reservations"}
+HTTP Status: 401
+
+--- POST /api/reservations (sans token) ---
+{"timestamp":"2026-09-11T10:09:36.044+00:00","status":401,"error":"Unauthorized","message":"","path":"/api/reservations"}
+HTTP Status: 401
+
+--- DELETE /api/reservations/1 (sans token) ---
+{"timestamp":"2026-09-11T10:09:36.695+00:00","status":401,"error":"Unauthorized","message":"","path":"/api/reservations/1"}
+HTTP Status: 401
+
+RESULTAT : Tous les endpoints retournent 401 Unauthorized
+RS-01 VALIDEE

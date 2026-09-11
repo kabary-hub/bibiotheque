@@ -1,0 +1,38 @@
+============================================================
+  PREUVE RS-04 / RS-02 / RS-03
+  Date : Fri, Sep 11, 2026 11:09:55 AM
+============================================================
+
+=== RS-04 : POST avec seul livreId (identite depuis le token) ===
+
+--- Requete : POST /api/reservations { "livreId": 202 } ---
+--- Token : adherent1 (role ADHERENT) ---
+{"timestamp":"2026-09-11T10:09:56","status":409,"error":"Conflict","message":"RG-02 : l'adherent adherent1 a deja une reservation active sur le livre L2 - Germinal.","regle":"RG-02"}
+HTTP Status: 409
+
+OBSERVATION : adherentId = 3 (vient du TOKEN, pas du client)
+RS-04 VALIDEE
+
+============================================================
+
+=== RS-02 : ADHERENT tente DELETE -> 403 ===
+
+--- Requete : DELETE /api/reservations/4 ---
+--- Token : adherent1 (role ADHERENT, PAS BIBLIOTHECAIRE) ---
+{"timestamp":"2026-09-11T10:09:56","status":403,"error":"Forbidden","message":"Vous etes authentifie mais votre role ne permet pas cette operation."}
+HTTP Status: 403
+
+OBSERVATION : 403 Forbidden (role ADHERENT ne peut pas supprimer)
+RS-02 VALIDEE
+
+============================================================
+
+=== RS-03 : ADHERENT consulte reservation d'un autre -> 403 ===
+
+--- Requete : GET /api/reservations/1 ---
+--- Reservation #1 appartient a 'siddighi' (userId=2), pas a adherent1 (userId=3) ---
+{"timestamp":"2026-09-11T10:09:56","status":403,"error":"Forbidden","message":"Vous etes authentifie mais votre role ne permet pas cette operation."}
+HTTP Status: 403
+
+OBSERVATION : 403 Forbidden (pas le proprietaire)
+RS-03 VALIDEE

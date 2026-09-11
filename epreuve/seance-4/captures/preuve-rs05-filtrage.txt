@@ -1,0 +1,31 @@
+============================================================
+  PREUVE RS-05 : Filtrage par role
+  Date : Fri, Sep 11, 2026 11:10:38 AM
+============================================================
+
+=== RS-05 : ADHERENT ne voit que ses reservations ===
+
+--- GET /api/reservations par adherent1 (userId=3) ---
+[{"id":5,"livreId":203,"livreTitre":"L3 - Madame Bovary","adherentId":3,"adherentNom":"Adherent Alpha","dateReservation":"2026-09-11T10:10:13","dateExpiration":"2026-09-18T10:10:13","statut":"EN_ATTENTE"},{"id":4,"livreId":202,"livreTitre":"L2 - Germinal","adherentId":3,"adherentNom":"Adherent Alpha","dateReservation":"2026-09-11T09:47:42","dateExpiration":"2026-09-18T09:47:42","statut":"EN_ATTENTE"}]
+
+OBSERVATION : Seules les reservations avec adherentId=3 apparaissent
+RS-05 VALIDEE
+
+============================================================
+
+=== BIBLIOTHECAIRE voit TOUTES les reservations ===
+
+--- GET /api/reservations par biblio ---
+[{"id":5,"livreId":203,"livreTitre":"L3 - Madame Bovary","adherentId":3,"adherentNom":"Adherent Alpha","dateReservation":"2026-09-11T10:10:13","dateExpiration":"2026-09-18T10:10:13","statut":"EN_ATTENTE"},{"id":4,"livreId":202,"livreTitre":"L2 - Germinal","adherentId":3,"adherentNom":"Adherent Alpha","dateReservation":"2026-09-11T09:47:42","dateExpiration":"2026-09-18T09:47:42","statut":"EN_ATTENTE"},{"id":3,"livreId":202,"livreTitre":"L2 - Germinal","adherentId":2,"adherentNom":"Balde Boubacar Siddighi","dateReservation":"2026-08-31T21:38:38","dateExpiration":"2026-09-07T21:38:38","statut":"EXPIREE"},{"id":2,"livreId":204,"livreTitre":"L4 - Les Fleurs du mal","adherentId":301,"adherentNom":"A1 - Reservataire principal","dateReservation":"2026-08-31T14:29:19","dateExpiration":"2026-09-07T14:29:19","statut":"ANNULEE"},{"id":1,"livreId":204,"livreTitre":"L4 - Les Fleurs du mal","adherentId":2,"adherentNom":"Balde Boubacar Siddighi","dateReservation":"2026-08-31T14:27:30","dateExpiration":"2026-09-07T14:27:30","statut":"ANNULEE"}]
+
+OBSERVATION : Toutes les reservations de TOUS les adherents apparaissent
+
+============================================================
+
+=== BIBLIOTHECAIRE supprime -> 204 ===
+
+--- DELETE /api/reservations/5 par biblio ---
+
+HTTP Status: 204
+
+OBSERVATION : 204 No Content (seul le BIBLIOTHECAIRE peut supprimer)
