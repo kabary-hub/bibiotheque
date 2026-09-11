@@ -29,18 +29,7 @@
         </select>
       </div>
 
-      <div class="field">
-        <label class="label" for="adherent">
-          Member <span class="required" aria-hidden="true">*</span>
-        </label>
-        <select id="adherent" name="adherent" class="select"
-                [(ngModel)]="adherentId" [disabled]="envoiEnCours" required>
-          <option [ngValue]="null" disabled>— Choose a member —</option>
-          <option *ngFor="let a of adherents" [ngValue]="a.userId">
-            {{ libelleAdherent(a) }}
-          </option>
-        </select>
-      </div>
+      <!-- RS-04 : le champ adherent est retire. L'identite vient du token JWT. -->
 
     </div>
 
@@ -51,7 +40,7 @@
         {{ envoiEnCours ? 'Creating...' : 'Reserve' }}
       </button>
       <span *ngIf="!valide" style="font-size:var(--fs-sm); color:var(--c-ink-muted)">
-        Choose a book and a member to enable the button.
+        Choose a book to enable the button.
       </span>
     </div>
 

@@ -135,12 +135,13 @@ export class ReservationsComponent implements OnInit {
     // Creation
     // =====================================================================
 
-    creer(demande: { livreId: number, adherentId: number }): void {
+    creer(demande: { livreId: number }): void {
         this.creationEnCours = true;
         this.erreurCreation = null;
         this.messageSucces = null;
 
-        this.reservationService.creer(demande.livreId, demande.adherentId).subscribe({
+        // RS-04 : seul livreId est envoye. L'identite vient du token JWT.
+        this.reservationService.creer(demande.livreId).subscribe({
             next: (creee) => {
                 this.creationEnCours = false;
                 this.jetonReinitialisation++;

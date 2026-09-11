@@ -30,22 +30,21 @@ export class ReservationFormComponent implements OnChanges {
      */
     @Input() jetonReinitialisation = 0;
 
-    @Output() soumettre = new EventEmitter<{ livreId: number, adherentId: number }>();
+    // RS-04 : seul livreId est envoye. L'identite de l'adherent vient du token JWT.
+    @Output() soumettre = new EventEmitter<{ livreId: number }>();
     @Output() reessayerReferentiels = new EventEmitter<void>();
 
     livreId: number | null = null;
-    adherentId: number | null = null;
 
     ngOnChanges(changements: SimpleChanges): void {
         if (changements['jetonReinitialisation'] && !changements['jetonReinitialisation'].firstChange) {
             this.livreId = null;
-            this.adherentId = null;
         }
     }
 
-    /** Les deux champs sont obligatoires : le bouton reste inactif sans eux. */
+    /** Le champ livreId est obligatoire : le bouton reste inactif sans lui. */
     get valide(): boolean {
-        return this.livreId !== null && this.adherentId !== null;
+        return this.livreId !== null;
     }
 
     /**
@@ -62,17 +61,12 @@ export class ReservationFormComponent implements OnChanges {
         return `${livre.bookName} — ${livre.bookAuthor} (${exemplaires})`;
     }
 
-    libelleAdherent(adherent: Users): string {
-        return `${adherent.name} (${adherent.username})`;
-    }
-
     envoyer(): void {
         if (!this.valide || this.envoiEnCours) {
             return;
         }
         this.soumettre.emit({
-            livreId: this.livreId as number,
-            adherentId: this.adherentId as number
+            livreId: this.livreId as number
         });
     }
 }

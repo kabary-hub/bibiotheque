@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -41,6 +42,10 @@ import static org.mockito.Mockito.when;
  * Les repositories sont simules : chaque test decrit un etat du systeme et
  * verifie la decision prise. C'est precisement ce que permet d'avoir sorti la
  * logique du controleur.
+ *
+ * Depuis la seance 4, creer() recoit directement l'entite Users (RS-04) :
+ * le test passe donc explicitement l'adherent au lieu de le faire croire
+ * venu du DTO.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ReservationService - regles de gestion")
@@ -79,7 +84,8 @@ class ReservationServiceTest {
 
         demande = new ReservationRequestDto();
         demande.setLivreId(ID_LIVRE);
-        demande.setAdherentId(ID_ADHERENT);
+        // Plus de demande.setAdherentId() : RS-04 l'interdit.
+        // L'adherent est passe directement a creer().
     }
 
     // ------------------------------------------------------------------
@@ -88,7 +94,7 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-03 : une quatrieme reservation active est refusee")
-    void rg03_refuseAuDelaDeTroisReservationsActives() {
+    void refuseCreationQuandAdherentATroisReservationsActives() {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreIndisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
@@ -97,7 +103,7 @@ class ReservationServiceTest {
         when(reservationRepository.countByAdherentUserIdAndStatutIn(
                 eq(ID_ADHERENT), anyCollection())).thenReturn(3L);
 
-        assertThatThrownBy(() -> reservationService.creer(demande))
+        assertThatThrownBy(() -> reservationService.creer(demande, adherent))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("RG-03")
                 .hasMessageContaining("maximum autorise est de 3");
@@ -108,7 +114,7 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-03 : la troisieme reservation active passe encore")
-    void rg03_accepteJusquaTroisReservationsActives() {
+    void peutCreerUneReservationQuandAdherentADeuxReservationsActives() {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreIndisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
@@ -119,7 +125,7 @@ class ReservationServiceTest {
         when(reservationRepository.save(any(Reservation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReservationResponseDto resultat = reservationService.creer(demande);
+        ReservationResponseDto resultat = reservationService.creer(demande, adherent);
 
         assertThat(resultat.getStatut()).isEqualTo(StatutReservation.EN_ATTENTE);
         assertThat(resultat.getLivreId()).isEqualTo(ID_LIVRE);
@@ -128,7 +134,7 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-03 : le comptage ne porte que sur EN_ATTENTE et DISPONIBLE")
-    void rg03_neCompteQueLesStatutsActifs() {
+    void neCompteQueLesStatutsActifs() {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreIndisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
@@ -139,14 +145,13 @@ class ReservationServiceTest {
         when(reservationRepository.save(any(Reservation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        reservationService.creer(demande);
+        reservationService.creer(demande, adherent);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<StatutReservation>> captor =
                 ArgumentCaptor.forClass(Collection.class);
         verify(reservationRepository).countByAdherentUserIdAndStatutIn(eq(ID_ADHERENT), captor.capture());
 
-        // Une reservation ANNULEE, EXPIREE ou HONOREE ne consomme pas le quota.
         assertThat(captor.getValue())
                 .containsExactlyInAnyOrder(StatutReservation.EN_ATTENTE, StatutReservation.DISPONIBLE);
     }
@@ -157,7 +162,7 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-01 : reserver un livre disponible est refuse")
-    void rg01_refuseUnLivreDisponible() {
+    void refuseUnLivreDisponible() {
 
         Books livreDisponible = new Books();
         livreDisponible.setBookId(ID_LIVRE);
@@ -167,7 +172,7 @@ class ReservationServiceTest {
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreDisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
 
-        assertThatThrownBy(() -> reservationService.creer(demande))
+        assertThatThrownBy(() -> reservationService.creer(demande, adherent))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("RG-01");
 
@@ -176,24 +181,23 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-02 : deux reservations actives sur le meme livre sont refusees")
-    void rg02_refuseUnDoublonActif() {
+    void refuseUnDoublonActif() {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreIndisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
         when(reservationRepository.existsByAdherentUserIdAndLivreBookIdAndStatutIn(
                 eq(ID_ADHERENT), eq(ID_LIVRE), anyCollection())).thenReturn(true);
 
-        assertThatThrownBy(() -> reservationService.creer(demande))
+        assertThatThrownBy(() -> reservationService.creer(demande, adherent))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("RG-02");
 
-        // Le quota n'est meme pas interroge : le doublon suffit a trancher.
         verify(reservationRepository, never()).countByAdherentUserIdAndStatutIn(anyInt(), anyCollection());
     }
 
     @Test
     @DisplayName("RG-04 : l'expiration tombe exactement sept jours apres la reservation")
-    void rg04_calculeLexpirationASeptJours() {
+    void calculeLexpirationASeptJours() {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.of(livreIndisponible));
         when(usersRepository.findById(ID_ADHERENT)).thenReturn(Optional.of(adherent));
@@ -205,11 +209,9 @@ class ReservationServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         LocalDateTime avant = LocalDateTime.now();
-        ReservationResponseDto resultat = reservationService.creer(demande);
+        ReservationResponseDto resultat = reservationService.creer(demande, adherent);
 
-        // La date vient bien du serveur, pas du client : elle encadre l'appel.
         assertThat(resultat.getDateReservation()).isAfterOrEqualTo(avant);
-
         assertThat(Duration.between(resultat.getDateReservation(), resultat.getDateExpiration()))
                 .isEqualTo(Duration.ofDays(Reservation.DUREE_VALIDITE_JOURS));
     }
@@ -220,7 +222,7 @@ class ReservationServiceTest {
 
         when(booksRepository.findById(ID_LIVRE)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> reservationService.creer(demande))
+        assertThatThrownBy(() -> reservationService.creer(demande, adherent))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Le livre d'identifiant 1 n'existe pas.");
     }
@@ -231,26 +233,26 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-05 : une reservation EN_ATTENTE peut etre annulee")
-    void rg05_annuleUneReservationActive() {
+    void annuleUneReservationActive() {
 
         Reservation enAttente = reservation(StatutReservation.EN_ATTENTE);
         when(reservationRepository.findById(10)).thenReturn(Optional.of(enAttente));
         when(reservationRepository.save(any(Reservation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReservationResponseDto resultat = reservationService.annuler(10);
+        ReservationResponseDto resultat = reservationService.annuler(10, adherent, true);
 
         assertThat(resultat.getStatut()).isEqualTo(StatutReservation.ANNULEE);
     }
 
     @Test
     @DisplayName("RG-06 : une reservation deja ANNULEE ne peut plus changer d'etat")
-    void rg06_refuseDeReannulerUnStatutTerminal() {
+    void refuseDeReannulerUnStatutTerminal() {
 
         Reservation annulee = reservation(StatutReservation.ANNULEE);
         when(reservationRepository.findById(10)).thenReturn(Optional.of(annulee));
 
-        assertThatThrownBy(() -> reservationService.annuler(10))
+        assertThatThrownBy(() -> reservationService.annuler(10, adherent, true))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("RG-05")
                 .hasMessageContaining("RG-06");
@@ -260,7 +262,7 @@ class ReservationServiceTest {
 
     @Test
     @DisplayName("RG-06 : le passage automatique en EXPIREE ignore les statuts terminaux")
-    void rg06_expirationNeCibleQueLesReservationsActives() {
+    void expirationNeCibleQueLesReservationsActives() {
 
         when(reservationRepository.findByStatutInAndDateExpirationBefore(anyCollection(), any()))
                 .thenReturn(java.util.Collections.singletonList(reservation(StatutReservation.EN_ATTENTE)));
@@ -278,6 +280,54 @@ class ReservationServiceTest {
                 .containsExactlyInAnyOrder(StatutReservation.EN_ATTENTE, StatutReservation.DISPONIBLE)
                 .doesNotContain(StatutReservation.ANNULEE, StatutReservation.HONOREE);
     }
+
+    // ------------------------------------------------------------------
+    //  RS-03 : verification du proprietaire (service layer)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("RS-03 : un ADHERENT ne peut consulter que sa propre reservation")
+    void refuseConsulterReservationDunAutre() {
+        Reservation reservationDunAutre = reservation(StatutReservation.EN_ATTENTE);
+        // La reservation appartient a l'adherent (ID=2), mais on appelle avec un autre adherent
+        Users autreAdherent = new Users();
+        autreAdherent.setUserId(99);
+        autreAdherent.setUsername("autre");
+
+        when(reservationRepository.findById(10)).thenReturn(Optional.of(reservationDunAutre));
+
+        assertThatThrownBy(() -> reservationService.consulter(10, autreAdherent, false))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("autorise");
+    }
+
+    @Test
+    @DisplayName("RS-03 : un BIBLIOTHECAIRE peut consulter la reservation de n'importe qui")
+    void bibliothecairePeutConsulterTout() {
+        Reservation reservation = reservation(StatutReservation.EN_ATTENTE);
+        when(reservationRepository.findById(10)).thenReturn(Optional.of(reservation));
+
+        ReservationResponseDto resultat = reservationService.consulter(10, adherent, true);
+        assertThat(resultat.getId()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("RS-03 : un ADHERENT ne peut annuler que sa propre reservation")
+    void refuseAnnulerReservationDunAutre() {
+        Reservation reservationDunAutre = reservation(StatutReservation.EN_ATTENTE);
+        Users autreAdherent = new Users();
+        autreAdherent.setUserId(99);
+        autreAdherent.setUsername("autre");
+
+        when(reservationRepository.findById(10)).thenReturn(Optional.of(reservationDunAutre));
+
+        assertThatThrownBy(() -> reservationService.annuler(10, autreAdherent, false))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // ------------------------------------------------------------------
+    //  Helpers
+    // ------------------------------------------------------------------
 
     private Reservation reservation(StatutReservation statut) {
         Reservation reservation = new Reservation();

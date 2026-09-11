@@ -45,8 +45,12 @@ export class ReservationService {
         return this.httpClient.get<Reservation[]>(this.baseURL, { params });
     }
 
-    creer(livreId: number, adherentId: number): Observable<Reservation> {
-        return this.httpClient.post<Reservation>(this.baseURL, { livreId, adherentId });
+    /**
+     * RS-04 : seul livreId est envoye. L'identifiant de l'adherent est
+     * recupere depuis le token JWT coté serveur, jamais du corps.
+     */
+    creer(livreId: number): Observable<Reservation> {
+        return this.httpClient.post<Reservation>(this.baseURL, { livreId });
     }
 
     annuler(id: number): Observable<Reservation> {

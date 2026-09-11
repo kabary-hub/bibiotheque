@@ -1,0 +1,348 @@
+{
+  "info": {
+    "_postman_id": "c2c2074e-6e53-4d3b-af42-3f1b6e4d8b21",
+    "name": "Bibliotheque - Securite Reservation (seance 4)",
+    "description": "Collection complete de securisation du module Reservation.\n\n=== ORDRE D'EXECUTION ===\n  1 Authentification : recuperer les tokens ADHERENT et BIBLIOTHECAIRE\n  2 Securite RS-01 : sans token, tout renvoie 401\n  3 Securite RS-02 : ADHERENT sur DELETE -> 403\n  4 Securite RS-03 : ADHERENT sur reservation d'un autre -> 403\n  5 Securite RS-04 : identite depuis le token, pas du corps\n  6 Securite RS-05 : ADHERENT ne voit que ses reservations\n  7 BIBLIOTHECAIRE : peut tout faire\n  8 Regles de gestion : RG-01 a RG-06\n\n=== PREREQUIS ===\nLe backend de la branche feature/reservation-securite-boubacar-siddighi-balde\ndoit tourner sur le port 8080.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "L1", "value": "201" },
+    { "key": "L2", "value": "202" },
+    { "key": "L3", "value": "203" },
+    { "key": "L4", "value": "204" },
+    { "key": "L5", "value": "205" },
+    { "key": "A1", "value": "301" },
+    { "key": "A2", "value": "302" },
+    { "key": "tokenAdherent", "value": "" },
+    { "key": "tokenBiblio", "value": "" },
+    { "key": "reservationA1", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 - Authentification",
+      "item": [
+        {
+          "name": "1.1 POST /authenticate - adherent1 (role ADHERENT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('tokenAdherent', json.jwtToken);",
+                  "pm.test('Un jeton JWT est renvoye', function () {",
+                  "    pm.expect(json.jwtToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('Le compte porte le role ADHERENT', function () {",
+                  "    pm.expect(JSON.stringify(json.user.role)).to.include('ADHERENT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"adherent1\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/authenticate", "host": ["{{baseUrl}}"], "path": ["authenticate"] },
+            "description": "Connexion d'un adherent. Le token est range dans {{tokenAdherent}}."
+          }
+        },
+        {
+          "name": "1.2 POST /authenticate - biblio (role BIBLIOTHECAIRE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('tokenBiblio', json.jwtToken);",
+                  "pm.test('Le compte porte le role BIBLIOTHECAIRE', function () {",
+                  "    pm.expect(JSON.stringify(json.user.role)).to.include('BIBLIOTHECAIRE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"biblio\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/authenticate", "host": ["{{baseUrl}}"], "path": ["authenticate"] },
+            "description": "Connexion d'un bibliothecaire. Le token est range dans {{tokenBiblio}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - RS-01 : sans token -> 401",
+      "item": [
+        {
+          "name": "2.1 GET sans token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Aucun corps d\'erreur metier n\'est renvoye', function () {",
+                  "    const text = pm.response.text();",
+                  "    pm.expect(text).to.not.include('regle');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "RS-01 : sans token, le serveur ne sait pas qui vous est. 401."
+          }
+        },
+        {
+          "name": "2.2 POST sans token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": 202\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "RS-01 : meme sans token, le POST est rejete."
+          }
+        },
+        {
+          "name": "2.3 DELETE sans token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reservations/1", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "1"] },
+            "description": "RS-01 : le DELETE est aussi protege."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - RS-02 : ADHERENT sur DELETE -> 403",
+      "item": [
+        {
+          "name": "3.1 ADHERENT tente DELETE -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });",
+                  "pm.test('Ce n est PAS un 401 : l adherent est authentifie', function () {",
+                  "    pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdherent}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations/1", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "1"] },
+            "description": "RS-02 : le role ADHERENT ne permet pas la suppression. 403 et non 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - RS-03 : reservation d'un autre -> 403",
+      "item": [
+        {
+          "name": "4.1 Creer une reservation pour A1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('reservationA1', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdherent}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"livreId\": {{L2}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "RS-04 : seul livreId est envoye. L'identite vient du token."
+          }
+        },
+        {
+          "name": "4.2 BIBLIOTHECAIRE consulte la reservation de A1 -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenBiblio}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}"] },
+            "description": "Le BIBLIOTHECAIRE peut consulter n'importe quelle reservation."
+          }
+        },
+        {
+          "name": "4.3 adherent2 tente de consulter la reservation de A1 -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdherent}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}"] },
+            "description": "RS-03 : adherent1 ne peut pas consulter la reservation d'un autre."
+          }
+        },
+        {
+          "name": "4.4 adherent2 tente d'annuler la reservation de A1 -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdherent}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}/annuler", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}", "annuler"] },
+            "description": "RS-03 : adherent1 ne peut pas annuler la reservation d'un autre."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - RS-05 : filtrage par role",
+      "item": [
+        {
+          "name": "5.1 ADHERENT voit uniquement ses reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Toutes les reservations appartiennent a l adherent courant', function () {",
+                  "    const reservations = pm.response.json();",
+                  "    reservations.forEach(function(r) {",
+                  "        pm.expect(r.adherentId).to.eql(301);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdherent}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "RS-05 : le serveur ne renvoie que les reservations de l'adherent authentifie."
+          }
+        },
+        {
+          "name": "5.2 BIBLIOTHECAIRE voit toutes les reservations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Au moins deux reservations de adherents differents', function () {",
+                  "    const reservations = pm.response.json();",
+                  "    const adherents = reservations.map(function(r) { return r.adherentId; });",
+                  "    pm.expect(new Set(adherents).size).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenBiblio}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations", "host": ["{{baseUrl}}"], "path": ["api", "reservations"] },
+            "description": "Le BIBLIOTHECAIRE voit toutes les reservations, sans filtrage."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - BIBLIOTHECAIRE : peut tout faire",
+      "item": [
+        {
+          "name": "6.1 BIBLIOTHECAIRE supprime -> 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenBiblio}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservations/{{reservationA1}}", "host": ["{{baseUrl}}"], "path": ["api", "reservations", "{{reservationA1}}"] },
+            "description": "Le BIBLIOTHECAIRE est le seul a pouvoir supprimer (RS-02)."
+          }
+        }
+      ]
+    }
+  ]
+}

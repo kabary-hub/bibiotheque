@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -33,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Les cinq endpoints traverses de bout en bout : validation, securite, service,
  * JPA et serialisation, sur une base H2 en memoire.
+ *
+ * Chaque test est annot\u00e9 avec @WithMockUser pour simuler un utilisateur
+ * authentifi\u00e9 (obligatoire depuis la securisation RS-01).
  *
  * Le test unitaire ReservationServiceTest verifie les decisions metier ; celui-ci
  * verifie que chaque decision ressort avec le bon code HTTP.
@@ -80,52 +84,46 @@ class ReservationControllerTest {
     // ------------------------------------------------------------------
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("POST sans livreId : 400, et le message nomme le champ manquant")
     void postSansLivreId() throws Exception {
         mockMvc.perform(post(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(null, adherent.getUserId())))
+                        .content(corps(null)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message", containsString("livreId")));
     }
 
     @Test
-    @DisplayName("POST sans adherentId : 400, et le message nomme le champ manquant")
-    void postSansAdherentId() throws Exception {
-        mockMvc.perform(post(BASE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(livreIndisponible.getBookId(), null)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("adherentId")));
-    }
-
-    @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("POST sur un livre inconnu : 404")
     void postLivreInconnu() throws Exception {
         mockMvc.perform(post(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(999_999, adherent.getUserId())))
+                        .content(corps(999_999)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("999999")));
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("RG-01 : POST sur un livre disponible : 409")
     void postLivreDisponible() throws Exception {
         mockMvc.perform(post(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(livreDisponible.getBookId(), adherent.getUserId())))
+                        .content(corps(livreDisponible.getBookId())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.regle").value("RG-01"));
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("POST sur un livre indisponible : 201, statut EN_ATTENTE, echeance a 7 jours")
     void postLivreIndisponible() throws Exception {
         mockMvc.perform(post(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(livreIndisponible.getBookId(), adherent.getUserId())))
+                        .content(corps(livreIndisponible.getBookId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.statut").value("EN_ATTENTE"))
@@ -141,9 +139,10 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("RG-02 : deux POST sur le meme livre par le meme adherent : 409")
     void postDoublon() throws Exception {
-        String demande = corps(livreIndisponible.getBookId(), adherent.getUserId());
+        String demande = corps(livreIndisponible.getBookId());
 
         mockMvc.perform(post(BASE).contentType(MediaType.APPLICATION_JSON).content(demande))
                 .andExpect(status().isCreated());
@@ -154,19 +153,20 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("RG-03 : la quatrieme reservation active : 409")
     void postQuatriemeReservation() throws Exception {
         for (int i = 1; i <= 3; i++) {
             Books autre = livre("Titre indisponible " + i, 0);
             mockMvc.perform(post(BASE)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(corps(autre.getBookId(), adherent.getUserId())))
+                            .content(corps(autre.getBookId())))
                     .andExpect(status().isCreated());
         }
 
         mockMvc.perform(post(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(corps(livreIndisponible.getBookId(), adherent.getUserId())))
+                        .content(corps(livreIndisponible.getBookId())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.regle").value("RG-03"));
     }
@@ -176,6 +176,7 @@ class ReservationControllerTest {
     // ------------------------------------------------------------------
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("GET liste : filtres par statut et par adherent")
     void getListeFiltrable() throws Exception {
         creerEnBase(StatutReservation.EN_ATTENTE);
@@ -202,6 +203,7 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("GET liste : un statut inconnu est refuse en 400, pas en 500")
     void getStatutInvalide() throws Exception {
         mockMvc.perform(get(BASE).param("statut", "PEUT_ETRE"))
@@ -210,6 +212,7 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("GET /{id} : 200 si connue, 404 sinon")
     void getParIdentifiant() throws Exception {
         Reservation reservation = creerEnBase(StatutReservation.EN_ATTENTE);
@@ -223,6 +226,7 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("GET /expirees : ne renvoie que les reservations EXPIREE")
     void getExpirees() throws Exception {
         creerEnBase(StatutReservation.EN_ATTENTE);
@@ -239,6 +243,7 @@ class ReservationControllerTest {
     // ------------------------------------------------------------------
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("RG-05 : PATCH annuler passe une fois, puis 409")
     void patchAnnuler() throws Exception {
         Reservation reservation = creerEnBase(StatutReservation.EN_ATTENTE);
@@ -255,6 +260,7 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("PATCH annuler sur une reservation inconnue : 404")
     void patchAnnulerInconnue() throws Exception {
         mockMvc.perform(patch(BASE + "/999999/annuler"))
@@ -262,6 +268,7 @@ class ReservationControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "biblio", roles = {"BIBLIOTHECAIRE"})
     @DisplayName("DELETE : 204 puis 404")
     void deleteReservation() throws Exception {
         Reservation reservation = creerEnBase(StatutReservation.EN_ATTENTE);
@@ -276,6 +283,7 @@ class ReservationControllerTest {
     // ------------------------------------------------------------------
 
     @Test
+    @WithMockUser(username = "lecteur", roles = {"ADHERENT"})
     @DisplayName("Swagger expose les cinq endpoints avec leurs codes de retour")
     void contratOpenApi() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
@@ -297,10 +305,9 @@ class ReservationControllerTest {
     //  Fabriques
     // ------------------------------------------------------------------
 
-    private String corps(Integer livreId, Integer adherentId) throws Exception {
+    private String corps(Integer livreId) throws Exception {
         Map<String, Integer> demande = new HashMap<>();
         demande.put("livreId", livreId);
-        demande.put("adherentId", adherentId);
         return objectMapper.writeValueAsString(demande);
     }
 

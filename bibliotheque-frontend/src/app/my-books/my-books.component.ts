@@ -120,7 +120,8 @@ export class MyBooksComponent implements OnInit {
     this.erreurReservation = null;
     this.succes = null;
 
-    this.reservationService.creer(this.livreIdChoisi, this.userId).subscribe({
+    // RS-04 : seul livreId est envoye. L'identite vient du token JWT.
+    this.reservationService.creer(this.livreIdChoisi).subscribe({
       next: (r) => {
         this.reservationEnCours = false;
         this.livreIdChoisi = null;

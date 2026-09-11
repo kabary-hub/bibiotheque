@@ -54,12 +54,14 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 // la regle etait inoperante et masquait le fait que la liste des
                 // livres est de toute facon accessible a tout compte connecte.
                 .antMatchers("/admin/books/**").authenticated()
-                // Module Reservation : meme politique que /borrow/**, l'autre module
-                // tourne vers l'adherent. Les codes de retour attendus par l'enonce
-                // sont 400, 404 et 409 ; exiger un jeton ici ferait apparaitre un 401
-                // qui n'y figure pas. A restreindre le jour ou le projet distinguera
-                // reellement les roles sur les operations d'adherent.
-                .antMatchers("/api/reservations/**").permitAll()
+                // -----------------------------------------------------------------
+                // Module Reservation (SEANCE 4) : authentifie requis (RS-01).
+                // Avant : permitAll — n'importe qui, sans jeton, pouvait tout faire.
+                // Apres : authentification obligatoire pour tous les endpoints.
+                // Le DELETE est en plus restreint au role BIBLIOTHECAIRE via
+                // @PreAuthorize dans ReservationController.supprimer().
+                // -----------------------------------------------------------------
+                .antMatchers("/api/reservations/**").authenticated()
                 // Documentation OpenAPI. Sans ces motifs, /swagger-ui.html repondrait
                 // 401 et la documentation exigee serait inaccessible.
                 .antMatchers(

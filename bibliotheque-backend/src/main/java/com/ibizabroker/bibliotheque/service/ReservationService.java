@@ -14,6 +14,7 @@ import com.ibizabroker.bibliotheque.exceptions.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +27,8 @@ import java.util.stream.Collectors;
  *
  * Le controleur ne fait qu'appeler ces methodes : il ne lit aucun repository,
  * n'evalue aucune regle et ne voit jamais l'entite Reservation. Les regles
- * RG-01 a RG-06 sont donc verifiables en un seul fichier, et testables sans
- * demarrer de serveur HTTP.
+ * RG-01 a RG-06 et les regles de securite RS-03, RS-04, RS-05 sont
+ * verifiables en un seul fichier.
  */
 @Service
 @Transactional
@@ -48,26 +49,30 @@ public class ReservationService {
     private UsersRepository usersRepository;
 
     // ------------------------------------------------------------------
-    //  Creation
+    //  Creation (RS-04 : identite vient du token, pas du DTO)
     // ------------------------------------------------------------------
 
     /**
      * Cree une reservation apres avoir verifie RG-01, RG-02 et RG-03.
      *
-     * L'ordre des controles n'est pas arbitraire : les existences d'abord (404),
-     * les regles ensuite (409). Repondre 409 sur un livre qui n'existe pas
-     * serait mensonger : il n'y a pas de conflit d'etat, il y a une ressource
-     * absente.
+     * RS-04 : le parametre adherent provient du token JWT, jamais du corps
+     * de la requete. Le client n'a aucun moyen d'imposer un autre identifiant.
+     *
+     * @param demande  contient uniquement livreId
+     * @param adherent l'adherent authentifie, recupere depuis le token
      */
-    public ReservationResponseDto creer(ReservationRequestDto demande) {
+    public ReservationResponseDto creer(ReservationRequestDto demande, Users adherent) {
 
         Books livre = booksRepository.findById(demande.getLivreId())
                 .orElseThrow(() -> new NotFoundException(
                         "Le livre d'identifiant " + demande.getLivreId() + " n'existe pas."));
 
-        Users adherent = usersRepository.findById(demande.getAdherentId())
+        // L'adherent vient du token : pas besoin de le rechercher en base,
+        // il est deja charge par JwtService.loadUserByUsername().
+        // Mais on le recharge pour s'assurer qu'il est toujours actif.
+        Users adherentActif = usersRepository.findById(adherent.getUserId())
                 .orElseThrow(() -> new NotFoundException(
-                        "L'adherent d'identifiant " + demande.getAdherentId() + " n'existe pas."));
+                        "L'adherent d'identifiant " + adherent.getUserId() + " n'existe pas."));
 
         // --- RG-01 : on ne reserve que ce qu'on ne peut pas emprunter --------
         if (estDisponible(livre)) {
@@ -79,31 +84,28 @@ public class ReservationService {
 
         // --- RG-02 : pas deux reservations actives sur le meme livre ---------
         boolean dejaReserve = reservationRepository.existsByAdherentUserIdAndLivreBookIdAndStatutIn(
-                adherent.getUserId(), livre.getBookId(), StatutReservation.ACTIFS);
+                adherentActif.getUserId(), livre.getBookId(), StatutReservation.ACTIFS);
         if (dejaReserve) {
             throw new BusinessRuleException("RG-02", String.format(
                     "l'adherent %s a deja une reservation active sur le livre %s.",
-                    adherent.getUsername(), livre.getBookName()));
+                    adherentActif.getUsername(), livre.getBookName()));
         }
 
         // --- RG-03 : trois reservations actives au maximum -------------------
         long actives = reservationRepository.countByAdherentUserIdAndStatutIn(
-                adherent.getUserId(), StatutReservation.ACTIFS);
+                adherentActif.getUserId(), StatutReservation.ACTIFS);
         if (actives >= MAX_RESERVATIONS_ACTIVES) {
             throw new BusinessRuleException("RG-03", String.format(
                     "l'adherent %s detient deja %d reservations actives, le maximum autorise "
                             + "est de %d. Annulez-en une avant d'en creer une nouvelle.",
-                    adherent.getUsername(), actives, MAX_RESERVATIONS_ACTIVES));
+                    adherentActif.getUsername(), actives, MAX_RESERVATIONS_ACTIVES));
         }
 
         Reservation reservation = new Reservation();
         reservation.setLivre(livre);
-        reservation.setAdherent(adherent);
+        reservation.setAdherent(adherentActif);
 
         // --- RG-04 : les deux dates viennent du serveur, jamais du client ----
-        // Un seul appel a now(), reutilise pour les deux dates : deux appels
-        // separes donneraient un ecart de quelques microsecondes, et
-        // dateExpiration ne vaudrait plus exactement dateReservation + 7 jours.
         LocalDateTime maintenant = LocalDateTime.now();
         reservation.setDateReservation(maintenant);
         reservation.setDateExpiration(maintenant.plusDays(Reservation.DUREE_VALIDITE_JOURS));
@@ -113,25 +115,34 @@ public class ReservationService {
         Reservation enregistree = reservationRepository.save(reservation);
         log.info("Reservation {} creee : livre {} pour l'adherent {}, echeance {}",
                 enregistree.getReservationId(), livre.getBookId(),
-                adherent.getUserId(), enregistree.getDateExpiration());
+                adherentActif.getUserId(), enregistree.getDateExpiration());
 
         return versDto(enregistree);
     }
 
     // ------------------------------------------------------------------
-    //  Consultation
+    //  Consultation (RS-05 : filtrage par role)
     // ------------------------------------------------------------------
 
     /**
-     * Liste les reservations, filtrable par statut et par adherent.
+     * Liste les reservations.
      *
-     * Les deux filtres sont independants et combinables : quatre cas, quatre
-     * requetes derivees. Une requete unique a parametres optionnels serait plus
-     * courte a lire, mais imposerait de passer un enum null a Hibernate, ce que
-     * celui-ci ne sait pas typer de facon fiable.
+     * RS-05 : un ADHERENT ne voit que ses propres reservations.
+     * Un BIBLIOTHECAIRE voit toutes les reservations.
+     *
+     * @param statut           filtre optionnel sur le statut
+     * @param adherentId       filtre optionnel sur l'adherent (pour admin)
+     * @param adherentCourant  l'utilisateur authentifie
+     * @param estBibliothecaire true si le role est BIBLIOTHECAIRE
      */
     @Transactional(readOnly = true)
-    public List<ReservationResponseDto> lister(StatutReservation statut, Integer adherentId) {
+    public List<ReservationResponseDto> lister(StatutReservation statut, Integer adherentId,
+                                               Users adherentCourant, boolean estBibliothecaire) {
+
+        // RS-05 : un ADHERENT ne voit que ses propres reservations.
+        if (!estBibliothecaire) {
+            adherentId = adherentCourant.getUserId();
+        }
 
         List<Reservation> resultat;
         if (adherentId != null && statut != null) {
@@ -147,9 +158,24 @@ public class ReservationService {
         return versDtos(resultat);
     }
 
+    /**
+     * RS-03 : un ADHERENT ne peut consulter qu'une reservation qui lui appartient.
+     * Un BIBLIOTHECAIRE peut consulter n'importe quelle reservation.
+     */
     @Transactional(readOnly = true)
-    public ReservationResponseDto consulter(Integer id) {
-        return versDto(chercher(id));
+    public ReservationResponseDto consulter(Integer id, Users adherentCourant, boolean estBibliothecaire) {
+        Reservation reservation = chercher(id);
+
+        // RS-03 : verification du proprietaire
+        if (!estBibliothecaire
+                && !reservation.getAdherent().getUserId().equals(adherentCourant.getUserId())) {
+            log.warn("Acces refuse : l'adherent {} tente d'acceder a la reservation {} qui appartient a {}",
+                    adherentCourant.getUserId(), id, reservation.getAdherent().getUserId());
+            throw new AccessDeniedException(
+                    "Vous n'etes pas autorise a consulter cette reservation.");
+        }
+
+        return versDto(reservation);
     }
 
     /** Bonus : les reservations dont l'echeance a ete constatee depassee. */
@@ -160,19 +186,29 @@ public class ReservationService {
     }
 
     // ------------------------------------------------------------------
-    //  Transitions d'etat
+    //  Transitions d'etat (RS-03 : verification du proprietaire)
     // ------------------------------------------------------------------
 
     /**
      * Annule une reservation.
      *
+     * RS-03 : un ADHERENT ne peut annuler qu'une reservation qui lui appartient.
+     *
      * RG-05 n'autorise l'annulation que depuis EN_ATTENTE ou DISPONIBLE, et
-     * RG-06 gele les trois autres statuts. Les deux regles designent ici le
-     * meme ensemble : le controle est donc unique, et le message cite les deux.
+     * RG-06 gele les trois autres statuts.
      */
-    public ReservationResponseDto annuler(Integer id) {
+    public ReservationResponseDto annuler(Integer id, Users adherentCourant, boolean estBibliothecaire) {
 
         Reservation reservation = chercher(id);
+
+        // RS-03 : verification du proprietaire
+        if (!estBibliothecaire
+                && !reservation.getAdherent().getUserId().equals(adherentCourant.getUserId())) {
+            log.warn("Acces refuse : l'adherent {} tente d'annuler la reservation {} qui appartient a {}",
+                    adherentCourant.getUserId(), id, reservation.getAdherent().getUserId());
+            throw new AccessDeniedException(
+                    "Vous n'etes pas autorise a annuler cette reservation.");
+        }
 
         if (!reservation.getStatut().estActif()) {
             throw new BusinessRuleException("RG-05", String.format(
@@ -194,11 +230,6 @@ public class ReservationService {
     /**
      * Bonus : bascule en EXPIREE les reservations actives dont l'echeance est
      * passee. Declenchee periodiquement par ReservationExpirationJob.
-     *
-     * Le filtre porte sur StatutReservation.ACTIFS : c'est ainsi que RG-06 est
-     * respectee ici. Une reservation ANNULEE ou HONOREE dont la date est
-     * depassee n'est pas retouchee, un statut terminal ne changeant plus, meme
-     * sous l'effet du temps.
      *
      * @return le nombre de reservations basculees
      */
